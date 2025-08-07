@@ -102,7 +102,7 @@ The program needs cookie to avoid api rick management. Please follow the step to
 
 ### Edit the config file
 
-```json
+```json5
 {
     // Replace this url with your own server
     "base_url": "https://douyin.wtf",
