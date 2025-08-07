@@ -1,5 +1,10 @@
-# douyin-user-downloader
-<center> A tool for downloading the user(s) post from Douyin. </center>
+<h1 align="center">Douyin-User-Downloader</h1>
+
+<div align="center">
+A tool for downloading the user(s) post from Douyin. </center>
+</div>
+
+<br/>
 
 <div align="center">
 <img alt="GitHub License" src="https://img.shields.io/github/license/Xu-Xihe/douyin-user-downloader">
