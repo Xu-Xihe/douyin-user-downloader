@@ -6,7 +6,7 @@ def setup_log() -> logging.Logger:
     logger = logging.getLogger("main_log")
     logger.setLevel(logging.DEBUG)
     
-    log = Path("log/main_log.log")
+    log = Path("logs/main_log.log")
     # Mkdir log
     try:
         log.parent.mkdir(parents=True, exist_ok=True)
@@ -23,7 +23,7 @@ def setup_log() -> logging.Logger:
     else:
         logger.debug("Log file exist.")
     
-    file_handler = RotatingFileHandler("log/main_log.log", maxBytes=1024 * 1024 * 10, backupCount=0)
+    file_handler = RotatingFileHandler("logs/main_log.log", maxBytes=1024 * 1024 * 10, backupCount=0)
     file_handler.setLevel(logging.DEBUG)
     console_handler = logging.StreamHandler()
     console_handler.setLevel(logging.INFO)

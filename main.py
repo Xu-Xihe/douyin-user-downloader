@@ -1,13 +1,17 @@
-from pydantic import BaseModel, ValidationError
-from src.logger import setup_log
-from src.downloader import V_downloader, single_downloader
-import src.post
-import src.database
 import pathlib
 import sqlite3
 import datetime
 import json5
 import time
+import yaml
+import sys
+# Add model searching path
+sys.path.append(str(pathlib.Path.cwd() / "API"))
+from pydantic import BaseModel, ValidationError
+from src.logger import setup_log
+from src.downloader import V_downloader, single_downloader
+import src.post
+import src.database
 
 # Settings class
 class user(BaseModel):
@@ -20,7 +24,6 @@ class user(BaseModel):
     key_include: bool = True
 
 class setting(BaseModel):
-    base_url: str = "https://douyin.wtf"
     database: bool = True
     default_path:str = "~/Downloads"
     date_format:str = r"%Y-%m-%d"
@@ -58,9 +61,20 @@ with open("settings.json", "r", encoding="utf-8") as f:
         main_log.info(f"Successfully loaded config from file.")
         main_log.debug(f"Config loaded: {settings}")
 
+# Copy cookie to API config file
+API_config_file_path = pathlib.Path.cwd() / "API" / "crawlers" / "douyin" / "web" / "config.yaml"
+if not API_config_file_path.exists():
+    main_log.error("API config file does not exist.")
+    exit()
+with open(API_config_file_path, "r", encoding="utf-8") as f:
+    API_config_file = yaml.safe_load(f)
+API_config_file["TokenManager"]["douyin"]["headers"]["Cookie"] = settings.cookie
+with open(API_config_file_path, "w", encoding="utf-8") as f:
+    yaml.safe_dump(API_config_file, f, allow_unicode=True)
+
 # Connect database
 try:
-    dtbe = sqlite3.connect("log/downloaded.db")
+    dtbe = sqlite3.connect("logs/downloaded.db")
 except sqlite3.OperationalError as e:
     if settings.database:
         main_log.error(f"Connect to database failed: OperationalError {e}")
@@ -78,7 +92,7 @@ else:
 for U in settings.users:
     user_pin += 1
     main_log.info(f"Geting posts info of user {U.nickname}... {user_pin}/{len(settings.users)}")
-    P = src.post.get_post(U.url, settings.base_url, main_log)
+    P = src.post.get_posts(U.url, main_log)
     if P == False:
         main_log.error(f"Get posts from {U.url} failed!")
         continue
@@ -136,7 +150,7 @@ for U in settings.users:
                     main_log.error(f"Make dir at path {V_path.resolve()} failed! Permission deny.")
             else:
                 V_path = path
-            erf = V_downloader(str(V_path.resolve()) + "/" + name, V, settings.base_url, settings.cookie, main_log)
+            erf = V_downloader(str(V_path.resolve()) + "/" + name, V, settings.cookie, main_log)
             download_p += 1
             download_f += V.num
             # Retry download
@@ -146,7 +160,7 @@ for U in settings.users:
                 for j in erf:
                     main_log.info(f"Wait for retry: {1 if j == 0 else j}/{V.num}. {settings.retry_sec}s.")
                     time.sleep(settings.retry_sec)
-                    if single_downloader(V.url[j], str(V_path.resolve()) + "/" + name, settings.base_url, settings.cookie, main_log, False if j == 0 else True):
+                    if single_downloader(V.url[j], str(V_path.resolve()) + "/" + name, settings.cookie, main_log):
                         erf.remove(j)
 
             if not len(erf) == 0:

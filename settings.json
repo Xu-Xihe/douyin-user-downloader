@@ -1,8 +1,6 @@
 {
-    // Replace this url with your own server
-    "base_url": "https://douyin.wtf/",
     // Enable the database for increasing update
-    "database": false,
+    "database": true,
     //default download path
     "default_path": "~/Downloads",
     //date formate
