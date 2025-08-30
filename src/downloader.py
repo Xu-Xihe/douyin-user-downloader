@@ -1,19 +1,66 @@
 import requests
 import logging
+import datetime
+import pathlib
+import time
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from src.post import post
+from src.align_unicode import align_unicode
 
-def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger) -> bool:
+# Generate single post download path and name
+def mkdir_download_path(post_info: post, path_str: str, separate_limit: int, data_format: str, desc_length: int, logger:logging.Logger):
+    #Post time & name
+    post_date = datetime.datetime.fromtimestamp(post_info.date)
+    desc = post_info.desc.replace("  ", " ")
+    desc = desc.replace(" #", "#")
+    pin = desc.find('#')
+    if pin == -1:
+        pin = abs(desc_length)
+    if desc_length < 0:
+        slice_length = min(pin, abs(desc_length))
+    else:
+        slice_length = desc_length
+    name = post_date.strftime(data_format) + "_" + desc[:slice_length]
+
+    # Generate path
+    path_str = path_str.replace("//", "/")
+    if post_info.num >= separate_limit:
+        path_str += '/' + name
+    
+    # Make dir
+    try:
+        path = pathlib.Path(path_str).expanduser()
+        path.mkdir(parents = True, exist_ok= True)
+    except PermissionError as e:
+        logger.error(f"Make dir at path {path_str} failed! Permission deny.")
+        return False
+    else:
+        return str(path / name)
+    
+def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger, retry_times: int = 3, retry_sec: int = 3) -> bool:
+    # Set headers
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36",
         "Referer": "https://www.douyin.com/",
         "Cookie": Cookie
     }
+
+    # Set retry strategy
+    retry_strategy = Retry(
+    total=retry_times,
+    backoff_factor=retry_sec,
+    status_forcelist=[500, 502, 503, 504],
+    allowed_methods=["HEAD", "GET", "OPTIONS", "POST"])
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session = requests.Session()
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+
+    # Download
     try:
-        r = requests.get(url, stream=True, headers=headers)
+        r = session.get(url, stream=True, headers=headers)
         r.raise_for_status()
-        with open(path, "wb") as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
     except requests.exceptions.ChunkedEncodingError as e:
         logger.error(f"Error downloading {url}: ChunkedEncodingError {e}")
         return False
@@ -24,11 +71,19 @@ def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger) 
         logger.error(f"Error downloading {url}: {e}")
         return False
     else:
-        logger.debug(f"Successfully! Downloaded {path} Link: {url}")
-        return True
+        try:
+            with open(path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    f.write(chunk)
+        except IOError as e:
+            logger.error(f"Single_downloader: Error writing to file {path}: {e}")
+            return False
+        else:
+            logger.debug(f"Successfully! Downloaded {path} Link: {url}")
+            return True
     
-def V_downloader(path_str: str, V: post, Cookie: str, logger: logging.Logger) -> list:
-    error_f = []
+def V_downloader(path_str: str, V: post, Cookie: str, retry_times: int, retry_sec: int, logger: logging.Logger, statistic: str = "") -> int:
+    error = 0
     for x in range(1,V.num+1):
         if V.num > 2:
             name = f"{path_str}_{x}"
@@ -39,5 +94,12 @@ def V_downloader(path_str: str, V: post, Cookie: str, logger: logging.Logger) ->
         else:
             name += ".mp4"
         if not single_downloader(V.url[x], name, Cookie, logger):
-            error_f.append(x)
-    return error_f # Num of failed download
+            error += 1
+    
+    # Result
+    if error == 0:
+        logger.info(f"Download Post {V.aweme_id} {align_unicode(V.desc[:8], 20, False)} done.   Total: {V.num}/{V.num}. {statistic}")
+        return 0
+    else:
+        logger.error(f"Download Post {V.aweme_id} {align_unicode(V.desc[:8], 20, False)} failed. Total: {V.num - len(error)}/{V.num}. {statistic}")
+        return error

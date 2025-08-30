@@ -1,41 +1,49 @@
 import pathlib
 import sqlite3
-import datetime
 import json5
-import time
 import yaml
 import sys
 # Add model searching path
 sys.path.append(str(pathlib.Path.cwd() / "API"))
 from pydantic import BaseModel, ValidationError
 from src.logger import setup_log
-from src.downloader import V_downloader, single_downloader
+from src.align_unicode import align_unicode
+from src.readme import generate_readme
+import src.downloader
+import src.filter
+import src.args
 import src.post
 import src.database
 
 # Settings class
 class user(BaseModel):
-    nickname: str
     url: str
-    path: str
+    nickname: str = ""
+    path: str = ""
+    remark: str = ""
+    time_limit: str = ""
     separate_limit: int = 2
     new_folder: bool = True
-    key_filter: str
-    key_include: bool = True
+    readme: bool = True
+    filter: str = ""
 
 class setting(BaseModel):
     database: bool = True
     default_path:str = "~/Downloads"
     date_format:str = r"%Y-%m-%d"
-    desc_length: int = 15
+    desc_length: int = -15
     users: list[user]
     cookie: str
+    retry_downloaded: bool = True
     retry: int = 3
     retry_sec: int = 3
     # Allow self class
     model_config = {
         "arbitrary_types_allowed": True
     }
+
+# Fetch args
+args = src.args.setup_args()
 
 # Statistics
 download_p = 0
@@ -61,117 +69,109 @@ with open("settings.json", "r", encoding="utf-8") as f:
         main_log.info(f"Successfully loaded config from file.")
         main_log.debug(f"Config loaded: {settings}")
 
+if not args.cookie:
+    args.cookie = settings.cookie
+
 # Copy cookie to API config file
-API_config_file_path = pathlib.Path.cwd() / "API" / "crawlers" / "douyin" / "web" / "config.yaml"
+API_config_file_path = pathlib.Path(__file__).parent / "API" / "crawlers" / "douyin" / "web" / "config.yaml"
 if not API_config_file_path.exists():
     main_log.error("API config file does not exist.")
     exit()
 with open(API_config_file_path, "r", encoding="utf-8") as f:
     API_config_file = yaml.safe_load(f)
-API_config_file["TokenManager"]["douyin"]["headers"]["Cookie"] = settings.cookie
+API_config_file["TokenManager"]["douyin"]["headers"]["Cookie"] = args.cookie
 with open(API_config_file_path, "w", encoding="utf-8") as f:
     yaml.safe_dump(API_config_file, f, allow_unicode=True)
 
 # Connect database
+database_path = pathlib.Path(__file__).parent / "logs" / "downloaded.db"
+if not database_path.exists():
+    database_init = True
+else:
+    database_init = False
 try:
     dtbe = sqlite3.connect("logs/downloaded.db")
 except sqlite3.OperationalError as e:
-    if settings.database:
         main_log.error(f"Connect to database failed: OperationalError {e}")
-    else:
-        main_log.info(f"Connect to database failed: OperationalError {e}")
 except sqlite3.Error as e:
-    if settings.database:
         main_log.error(f"Connect to database failed: {e}")
-    else:
-        main_log.info(f"Connect to database failed: {e}")
 else:
     cur = dtbe.cursor()
     main_log.debug("Successfully connected to database.")
+    if database_init:
+        src.database.init(cur, main_log)
+
+# If args, exit program
+if src.args.exe_args(args, cur, main_log):
+    cur.close()
+    if settings.database:
+        try:
+            dtbe.commit()
+        except sqlite3.OperationalError as e:
+            main_log.error(f"Commit to database failed: OperationalError {e}")
+        except sqlite3.Error as e:
+            main_log.error(f"Commit to database failed: {e}")
+    dtbe.close()
+    exit()
+
+if not settings.cookie:
+    main_log.warning("Cookie required. Post may not download without it.")
 
 for U in settings.users:
+    #Get posts data
     user_pin += 1
+    download_f += 1
     main_log.info(f"Geting posts info of user {U.nickname}... {user_pin}/{len(settings.users)}")
     P = src.post.get_posts(U.url, main_log)
     if P == False:
         main_log.error(f"Get posts from {U.url} failed!")
         continue
-
+    
     # Generate save path
-    if U.path == "":
-        path_str = settings.default_path
-    else:
+    if U.path:
         path_str = U.path
-    if U.new_folder:
-        if U.nickname == "":
-            path_str += "/"+P.nickname
-        else:
-            path_str += "/"+U.nickname
-    path_str.replace("//","/")
-    path = pathlib.Path(path_str).expanduser()
-    path_str = str(path.resolve()) # Transform to absolute path
-    try:
-        path.mkdir(parents = True, exist_ok= True)
-    except PermissionError as e:
-        main_log.error(f"Make dir at path {path_str} failed! Permission deny.")
-
-    main_log.info(f"User {P.nickname if U.nickname == "" else U.nickname} {P.sec_user_id} save_path: {path_str} downloading... ")
-
-    # All-new download check
-    exist_TABLE = src.database.find_user(P.user_id, cur, main_log)
-    if settings.database == False or (settings.database == True and exist_TABLE == False):
-        exist = False
     else:
-        exist = True
+        path_str = settings.default_path
+    if U.new_folder:
+        if U.nickname:
+            path_str += '/' + U.nickname
+        else:
+            path_str += '/' + P.nickname
 
+    # Check in database
+    dt_user = src.database.find_user(P, U.nickname if U.nickname else P.nickname, cur, main_log)
+
+    # Generate readme
+    if U.readme:
+        generate_readme(dt_user, P, U.nickname if U.nickname else P.nickname, U.remark, path_str, settings.cookie, cur, main_log)
+
+    # Post download      
+    main_log.info(f"User {P.nickname if U.nickname == "" else U.nickname} {P.sec_user_id} Save_path: {path_str} downloading... ")
     num = 0
     for V in P.posts:
         num += 1
-        #Database Check
-        if U.key_filter == "":
-            fit = True
-        elif (U.key_filter in V.desc and U.key_include) or (U.key_filter not in V.desc and U.key_include == False):
-            fit = True
-        else:
-            fit = False
-        need_D = src.database.find_V(P.user_id, V.aweme_id, fit, cur, main_log)
+        # Database Check
+        fit = src.filter.filter(V.desc, U.filter, main_log) and src.filter.time_limit(V.date, U.time_limit, main_log)
+        exist_V = src.database.find_V(P.user_id, V.aweme_id, fit, cur, main_log)
 
-        #Post time & name
-        post_dt = datetime.datetime.fromtimestamp(V.date)
-        name = post_dt.strftime(settings.date_format) + "_" + V.desc[:settings.desc_length]
-        
-        #Download post
-        if exist == False or (exist and need_D):
-            if V.num >= U.separate_limit:
-                V_path = path / name
-                try:
-                    V_path.mkdir(exist_ok=True)
-                except PermissionError as e:
-                    main_log.error(f"Make dir at path {V_path.resolve()} failed! Permission deny.")
-            else:
-                V_path = path
-            erf = V_downloader(str(V_path.resolve()) + "/" + name, V, settings.cookie, main_log)
-            download_p += 1
-            download_f += V.num
-            # Retry download
-            for i in range(settings.retry):
-                if len(erf) == 0:
-                    break
-                for j in erf:
-                    main_log.info(f"Wait for retry: {1 if j == 0 else j}/{V.num}. {settings.retry_sec}s.")
-                    time.sleep(settings.retry_sec)
-                    if single_downloader(V.url[j], str(V_path.resolve()) + "/" + name, settings.cookie, main_log):
-                        erf.remove(j)
-
-            if not len(erf) == 0:
-                main_log.error(f"Download Post {V.aweme_id} {V.desc[:8]} failed. Total: {V.num - len(erf)}/{V.num}. {num}/{len(P.posts)}")
-                error_f += erf
+        if (fit and exist_V == 1) or (fit and settings.retry_downloaded and exist_V == 2):
+            # Make download dir
+            mkdir = src.downloader.mkdir_download_path(V, path_str, U.separate_limit, settings.date_format, settings.desc_length, main_log)
+            if not mkdir:
+                continue
+            
+            # Download post
+            download_error = src.downloader.V_downloader(mkdir, V, settings.cookie, settings.retry, settings.retry_sec, main_log, f"{num}/{len(P.posts)}")
+            if download_error:
                 error_p += 1
+                error_f += download_error
             else:
-                main_log.info(f"Download Post {V.aweme_id} {V.desc[:8]:<20} done. Total: {V.num}/{V.num}. {num}/{len(P.posts)}")
+                src.database.download_V(P.user_id, V.aweme_id, cur, main_log)
+                download_p += 1
         else:
-            main_log.info(f"Post {V.aweme_id} {V.desc[:8]} is exist or be filtered off, download jumped. {num}/{len(P.posts)}")
-    main_log.info(f"User {P.nickname if U.nickname == "" else U.nickname} {P.sec_user_id} is done!")
+            main_log.info(f"Post {V.aweme_id} {align_unicode(V.desc[:8], 20, False)} skip download. {num}/{len(P.posts)}")
+    main_log.info(f"User {align_unicode(P.nickname if U.nickname == "" else U.nickname, 20, False)} {P.sec_user_id} is done!")
+    main_log.info(f"User {align_unicode(P.nickname if U.nickname == "" else U.nickname, 20, False)} {P.sec_user_id} is done!")
 
 # Close database
 cur.close()
@@ -184,7 +184,7 @@ if settings.database:
         main_log.error(f"Commit to database failed: {e}")
 dtbe.close()
 
-# Statisticsx
+# Statistics
 main_log.info(f"""Download completed! Total download:
     Users: {len(settings.users)}
     Post:  {download_p - error_p}/{download_p}

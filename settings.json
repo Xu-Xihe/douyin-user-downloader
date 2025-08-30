@@ -1,29 +1,43 @@
 {
     // Enable the database for increasing update
     "database": true,
-    //default download path
-    "default_path": "~/Downloads",
-    //date formate
+    // Default download path
+    "default_path": "Downloads/",
+    // The download results are restored. Program can retry the failed ones.
+    "retry_downloaded": true,
+
+    // Date formate
     "date_format": "%Y-%m-%d",
-    //The length of description of the video in the file name
-    "desc_length": 15,
-    //Retry times when failed
-    "retry": 3,
-    //Seconds between each try
+    // The length of description of the video in the file name
+    // The abs value is the length and if negative, all letter behind '#' will be abandoned.
+    "desc_length": -15,
+    
+    // Retry times when failed
+    "retry_times": 3,
+    // Seconds between each try
     "retry_sec": 3,
-    //Users to download
+
+    // Users to download
     "users": [
         {
-            //The url of the user's home page. Example:
-            //"https://www.douyin.com/user/xxx" or "https://v.douyin.com/xxx"
+            // The url of the user's home page. Example:
+            // "https://www.douyin.com/user/xxx" or "https://v.douyin.com/xxx"
             "url": "",
-            //The folder name of this user, empty for default nickname
+            // The folder name of this user, empty for default nickname
             "nickname": "",
-            //The save path for this user, empty for "default_path"
+            // The save path for this user, empty for "default_path"
             "path": "",
-            //If the post files is more or equal to this num, they will be put in a separate folder
+            // If "readme" is true, this str will be added to the readme.md
+            "remark": "",
+            // Only download the post which posted inside the interval.
+            // The date format should be "%Y.%m.%d" or "%Y.%m.%d %H:%M:%S".
+            // The hour, minute and second is optional. They will be set to 00:00:00 as default.
+            // The whole expression should be "{start}-{end}". Dividie with a '-'. Keep any boundary empty for no limitaion.
+            // Example: "-2006.4.29" will download any post before 2006.4.29 00:00:00, "-" equal to "".
+            "time_limit": "",
+            // If the files in the post is more or equal to this num, they will be put in a single folder
             "separate_limit": 2,
-            //Make new folder in the path for download
+            // Make new folder in the path for download
             // True
             // user
             //     - 2022-11-28 13:09 xxx.mp4
@@ -32,14 +46,17 @@
             // 2022-11-28 13:09 xxx.mp4
             // 2022-11-28 13:09 xxx.mp4
             "new_folder": true,
-            //True
-            //Only download the videos which description contains the key_filter
-            //False
-            //Only download the videos which description dose not contain the key_filter
-            "key_filter": "",
-            "key_include": true
+            // Create a readme file for users to store the details
+            // Only works when "new_folder" is true
+            "readme": true,
+            // Python expression is supported
+            // Key word must be in ${xxxxx}, like ${Hello}. Any space in the key word will be ignored.
+            // If '{', '}', '\', '$' is in the key word, use "\{", "\}", "\\", "\$"
+            // Use not, or, and, () to show a pattern
+            // For example, (${Hello} or ${Hi}) and ${Jon} and not ${Harry} means only download posts with "Hello" or "Hi" in the description. "Jon" must inside either but "Harry" must not inside.
+            "filter": ""
         } //,
     ],
-    // Required
+    // Required, refresh it time by time
     "cookie": ""
 }
