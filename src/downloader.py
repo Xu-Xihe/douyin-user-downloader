@@ -2,7 +2,6 @@ import requests
 import logging
 import datetime
 import pathlib
-import time
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from src.post import post
@@ -98,8 +97,8 @@ def V_downloader(path_str: str, V: post, Cookie: str, retry_times: int, retry_se
     
     # Result
     if error == 0:
-        logger.info(f"Download Post {V.aweme_id} {align_unicode(V.desc[:8], 20, False)} done.   Total: {V.num}/{V.num}. {statistic}")
+        logger.info(f"Post {V.aweme_id} {align_unicode(V.desc[:8], 20, False)} downloaded.      Total: {V.num}/{V.num}. {statistic}")
         return 0
     else:
-        logger.error(f"Download Post {V.aweme_id} {align_unicode(V.desc[:8], 20, False)} failed. Total: {V.num - len(error)}/{V.num}. {statistic}")
+        logger.error(f"Post {V.aweme_id} {align_unicode(V.desc[:8], 20, False)} download failed. Total: {V.num - error}/{V.num}. {statistic}")
         return error

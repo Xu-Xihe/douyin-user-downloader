@@ -1,6 +1,5 @@
 import logging
 import asyncio
-import re
 from API.crawlers.douyin.web.web_crawler import DouyinWebCrawler
 from dataclasses import dataclass, field
 
@@ -99,10 +98,11 @@ def fetch_user_profile(url: str, logger: logging.Logger) -> poster:
                      city           = data["city"],
                      school         = data["school_name"])
         logger.debug(f"Get user {rtn.user_id} nickname {rtn.nickname} success.")
+        return rtn
 
 def get_posts(url: str, logger: logging.Logger) -> poster:
     rtn = fetch_user_profile(url, logger)
-    
+
     #Get posts
     cursor, page = 0, 0
     while True:
@@ -133,7 +133,7 @@ def get_posts(url: str, logger: logging.Logger) -> poster:
             return rtn
         
 def get_single_post(url: str, logger: logging.Logger) -> post:
-    if "http" in str:
+    if "http" in url:
         aweme_id = asyncio.run(API.get_aweme_id(url))
     elif not url.isdigit():
         logger.error("Input error!")
@@ -147,4 +147,4 @@ def get_single_post(url: str, logger: logging.Logger) -> post:
         return False
     else:
         logger.debug(f"Get single post success: {aweme_id}")
-        return fetch_post_url(data, logger)
+        return fetch_post_url(data["aweme_detail"], logger)

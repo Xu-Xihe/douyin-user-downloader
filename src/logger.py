@@ -1,38 +1,45 @@
 import logging
+from rich.logging import RichHandler
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 def setup_log() -> logging.Logger:
+    # Get logger
     logger = logging.getLogger("main_log")
     logger.setLevel(logging.DEBUG)
-    
-    log = Path("logs/main_log.log")
+
+    # Console Handler
+    console_handler = RichHandler(
+        level=logging.INFO,
+        show_path=True,
+        rich_tracebacks=True,
+        enable_link_path=True,
+        )
+    console_handler.setFormatter(logging.Formatter("%(message)s", datefmt=r"[%X]"))
+    logger.addHandler(console_handler)
+    logger.info("Program Start\n")
+
     # Mkdir log
+    log_path = Path("logs/main_log.log")
     try:
-        log.parent.mkdir(parents=True, exist_ok=True)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
     except PermissionError as e:
-        logger.error(f"Make dir at path {log.parent.resolve()} failed! Permission deny.")
+        logger.error(f"Make dir at path {log_path.parent.resolve()} failed! Permission deny.")
     # Create log file
-    if not log.exists():
+    if not log_path.exists():
         try:
-            log.touch()
+            log_path.touch()
         except PermissionError as e:
             logger.error("Create log file failed! Permission deny.")
         else:
-            logger.debug("Create log file success.")
+            logger.info("Create log file success.")
     else:
-        logger.debug("Log file exist.")
+        logger.info("Log file exist.")
     
-    file_handler = RotatingFileHandler("logs/main_log.log", maxBytes=1024 * 1024 * 10, backupCount=0)
+    # File Handler
+    file_handler = RotatingFileHandler("logs/main_log.log", encoding="utf-8", maxBytes=1024 * 1024 * 10 * 5, backupCount=0)
     file_handler.setLevel(logging.DEBUG)
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
-
+    file_handler.setFormatter(logging.Formatter("%(asctime)s-%(levelname)-8s-%(filename)s:%(lineno)d-%(message)s", datefmt=r"%Y-%m-%d %H:%M:%S"))
     logger.addHandler(file_handler)
-    logger.addHandler(console_handler)
-    
+
     return logger

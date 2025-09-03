@@ -1,10 +1,8 @@
 import sqlite3
-import argparse
-import pathlib
 import logging
 from src.align_unicode import align_unicode as align
 from src.post import poster
-from src.readme import align_address
+from src.align_unicode import align_address
 
 def init(cur: sqlite3.Cursor, logger: logging.Logger):
     try:
@@ -13,12 +11,13 @@ def init(cur: sqlite3.Cursor, logger: logging.Logger):
                     alias VARCHAR(30) NOT NULL,
                     nickname VARCHAR(30) NOT NULL,
                     unique_id VARCHAR(30) NOT NULL,
-                    gender INT NOT NULL,
-                    age INT NOT NULL,
-                    address VARCHAR(30) NOT NULL,
-                    school VARCHAR(30) NOT NULL,
+                    gender INT,
+                    age INT,
+                    address VARCHAR(30),
+                    school VARCHAR(30),
                     IP VARCHAR(30) NOT NULL,
-                    Signature VARCHAR(30) NOT NULL);""")
+                    Signature VARCHAR(300)
+                    );""")
     except sqlite3.InterfaceError as e:
         logger.error(f"Database error (init): InterfaceError {e}")
     except sqlite3.DatabaseError as e:
@@ -27,6 +26,15 @@ def init(cur: sqlite3.Cursor, logger: logging.Logger):
         logger.debug(f"Database init done!")
 
 def find_user(U: poster, nickname: str, cur: sqlite3.Cursor, logger: logging.Logger) -> list:
+    try:
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?;", ("All_Users",))
+    except sqlite3.InterfaceError as e:
+        logger.error(f"Database error (find_user_0): InterfaceError {e}")
+    except sqlite3.DatabaseError as e:
+        logger.error(f"Database error (find_user_0): DatabaseError {e}")
+    else:
+        if cur.fetchone() is None:
+            init(cur, logger)
     try:
         cur.execute("SELECT * FROM \"All_Users\" WHERE user_id=?;", (U.user_id,))
     except sqlite3.InterfaceError as e:
@@ -43,6 +51,13 @@ def find_user(U: poster, nickname: str, cur: sqlite3.Cursor, logger: logging.Log
                             aweme_id VARCHAR(30) PRIMARY KEY NOT NULL,
                             filter BOOLEAN NOT NULL,
                             exist BOOLEAN NOT NULL);""")
+            except sqlite3.InterfaceError as e:
+                logger.error(f"Database error (find_user_2): InterfaceError {e}")
+            except sqlite3.DatabaseError as e:
+                logger.error(f"Database error (find_user_2): DatabaseError {e}")
+            else:
+                logger.debug(f"New table created: {align(nickname, 20, False)} {U.user_id}.")
+            try:
                 cur.execute("INSERT INTO \"All_Users\" VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",(
                     U.user_id,
                     nickname,
@@ -58,8 +73,6 @@ def find_user(U: poster, nickname: str, cur: sqlite3.Cursor, logger: logging.Log
                 logger.error(f"Database error (find_user_2): InterfaceError {e}")
             except sqlite3.DatabaseError as e:
                 logger.error(f"Database error (find_user_2): DatabaseError {e}")
-            else:
-                logger.debug(f"New table created: {align(nickname, 20, False)} {U.user_id}.")
         return rtn
 
 def update_user(user_id: str, col: str, value, cur:sqlite3.Cursor, logger:logging.Logger):

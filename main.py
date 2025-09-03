@@ -1,17 +1,22 @@
+#!/usr/bin/env python3
+# Add model searching path
+import sys
 import pathlib
+sys.path.append(str(pathlib.Path.cwd() / "API"))
+import src.args
+
+# Fetch args
+args = src.args.setup_args()
+
 import sqlite3
 import json5
 import yaml
-import sys
-# Add model searching path
-sys.path.append(str(pathlib.Path.cwd() / "API"))
 from pydantic import BaseModel, ValidationError
 from src.logger import setup_log
 from src.align_unicode import align_unicode
 from src.readme import generate_readme
 import src.downloader
 import src.filter
-import src.args
 import src.post
 import src.database
 
@@ -42,9 +47,6 @@ class setting(BaseModel):
         "arbitrary_types_allowed": True
     }
 
-# Fetch args
-args = src.args.setup_args()
-
 # Statistics
 download_p = 0
 download_f = 0
@@ -54,9 +56,6 @@ user_pin = 0
 
 # Setup logger
 main_log = setup_log()
-
-# Run
-main_log.info("\n\nProgram Start\n\n")
 
 # Import settings
 with open("settings.json", "r", encoding="utf-8") as f:
@@ -84,11 +83,6 @@ with open(API_config_file_path, "w", encoding="utf-8") as f:
     yaml.safe_dump(API_config_file, f, allow_unicode=True)
 
 # Connect database
-database_path = pathlib.Path(__file__).parent / "logs" / "downloaded.db"
-if not database_path.exists():
-    database_init = True
-else:
-    database_init = False
 try:
     dtbe = sqlite3.connect("logs/downloaded.db")
 except sqlite3.OperationalError as e:
@@ -98,8 +92,6 @@ except sqlite3.Error as e:
 else:
     cur = dtbe.cursor()
     main_log.debug("Successfully connected to database.")
-    if database_init:
-        src.database.init(cur, main_log)
 
 # If args, exit program
 if src.args.exe_args(args, cur, main_log):
@@ -120,10 +112,9 @@ if not settings.cookie:
 for U in settings.users:
     #Get posts data
     user_pin += 1
-    download_f += 1
-    main_log.info(f"Geting posts info of user {U.nickname}... {user_pin}/{len(settings.users)}")
     P = src.post.get_posts(U.url, main_log)
-    if P == False:
+    main_log.info(f"Posts info of user {U.nickname if U.nickname else P.nickname} get. {user_pin}/{len(settings.users)}")
+    if not P:
         main_log.error(f"Get posts from {U.url} failed!")
         continue
     
@@ -167,10 +158,10 @@ for U in settings.users:
                 error_f += download_error
             else:
                 src.database.download_V(P.user_id, V.aweme_id, cur, main_log)
-                download_p += 1
+            download_p += 1
+            download_f += V.num
         else:
             main_log.info(f"Post {V.aweme_id} {align_unicode(V.desc[:8], 20, False)} skip download. {num}/{len(P.posts)}")
-    main_log.info(f"User {align_unicode(P.nickname if U.nickname == "" else U.nickname, 20, False)} {P.sec_user_id} is done!")
     main_log.info(f"User {align_unicode(P.nickname if U.nickname == "" else U.nickname, 20, False)} {P.sec_user_id} is done!")
 
 # Close database
