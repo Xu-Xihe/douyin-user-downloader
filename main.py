@@ -2,7 +2,8 @@
 # Add model searching path
 import sys
 import pathlib
-sys.path.append(str(pathlib.Path.cwd() / "API"))
+BASE_PATH = pathlib.Path(__file__).resolve().parent
+sys.path.append(str(BASE_PATH / "API"))
 import src.args
 
 # Fetch args
@@ -58,7 +59,7 @@ user_pin = 0
 main_log = setup_log()
 
 # Import settings
-with open("settings.json", "r", encoding="utf-8") as f:
+with open(BASE_PATH / str("settings.json"), "r", encoding="utf-8") as f:
     try:
         settings = setting(**json5.load(f))
     except ValidationError as e:
@@ -72,7 +73,7 @@ if not args.cookie:
     args.cookie = settings.cookie
 
 # Copy cookie to API config file
-API_config_file_path = pathlib.Path(__file__).parent / "API" / "crawlers" / "douyin" / "web" / "config.yaml"
+API_config_file_path = BASE_PATH / "API" / "crawlers" / "douyin" / "web" / "config.yaml"
 if not API_config_file_path.exists():
     main_log.error("API config file does not exist.")
     exit()
@@ -84,7 +85,7 @@ with open(API_config_file_path, "w", encoding="utf-8") as f:
 
 # Connect database
 try:
-    dtbe = sqlite3.connect("logs/downloaded.db")
+    dtbe = sqlite3.connect(str(BASE_PATH / "logs/downloaded.db"))
 except sqlite3.OperationalError as e:
         main_log.error(f"Connect to database failed: OperationalError {e}")
 except sqlite3.Error as e:

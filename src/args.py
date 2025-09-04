@@ -40,7 +40,7 @@ def setup_args() -> argparse.ArgumentParser:
 
     # Version
     version = parser.add_argument_group("Version")
-    version.add_argument("-v", "--version", action='version', version='V1.0.0', help="Show program's version")
+    version.add_argument("-v", "--version", action='version', version='V1.1.4', help="Show program's version")
 
     # Get args && Args in file
     args = parser.parse_args()
@@ -65,10 +65,10 @@ def setup_args() -> argparse.ArgumentParser:
 
 def exe_args(args: argparse.Namespace, cur: sqlite3.Cursor, logger: logging.Logger) -> bool:
     # Import
-    if __name__ != "__main__":
+    import src.database
+    if args.user or args.post:
         import src.post
         import src.downloader
-        import src.database
         import src.filter
         from src.readme import generate_readme
         from src.align_unicode import align_unicode
@@ -140,11 +140,18 @@ def exe_args(args: argparse.Namespace, cur: sqlite3.Cursor, logger: logging.Logg
         print(src.database.execute(f"SELECT * FROM \"{args.list}\";", cur, logger))
     
     if args.delete:
-        src.database.erase_user(args.delete, cur, logger)
-        cur.execute("DELETE FROM \"All_Users\" WHERE user_id = ?", (args.delete,))
+        try:
+            src.database.erase_user(args.delete, cur, logger)
+            cur.execute("DELETE FROM \"All_Users\" WHERE user_id = ?", (args.delete,))
+        except sqlite3.InterfaceError as e:
+            logger.error(f"Database error (args_delete): InterfaceError {e}")
+        except sqlite3.DatabaseError as e:
+            logger.error(f"Database error (args_delete): DatabaseError {e}")
+        else:
+            logger.info(f"Delete {args.delete}.")
     
     if args.execute:
-        print(src.database.execute(args.execute, cur, logger))
+        logger.info(f"Database response: {src.database.execute(args.execute, cur, logger)}")
 
     # Args use?
     if any([args.user, args.post, args.list, args.delete, args.execute]):
