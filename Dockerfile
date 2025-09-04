@@ -18,6 +18,9 @@ RUN apt-get update && apt-get install -y cron && rm -rf /var/lib/apt/lists/*
 # Time set for cron
 ENV CRON_SCHEDULE="0 * * * *"
 
+# Set Time zone
+ENV TZ=Asia/Shanghai
+
 # Add entry bash
 RUN chmod +x /app/start.sh
 
