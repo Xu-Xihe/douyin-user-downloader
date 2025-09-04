@@ -60,6 +60,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: |
             ${{ env.IMAGE }}:${{ env.TAG }}
-            ${{ env.UPDATE_LATEST == 'true' && env.IMAGE + ':latest' || '' }}
+            ${{ env.UPDATE_LATEST == 'true' && format('{0}:latest', env.IMAGE) || '' }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
