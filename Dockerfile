@@ -22,7 +22,7 @@ ENV CRON_SCHEDULE="0 * * * *"
 ENV TZ=Asia/Shanghai
 
 # Set pathon path
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app:/app/API
 
 # Add entry bash
 RUN chmod +x /app/start.sh
