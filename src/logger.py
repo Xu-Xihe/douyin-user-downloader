@@ -20,7 +20,7 @@ def setup_log() -> logging.Logger:
     logger.info("Program Start\n")
 
     # Mkdir log
-    log_path = Path("logs/main_log.log")
+    log_path = Path(__file__).resolve().parent.parent / "logs/main_log.log"
     try:
         log_path.parent.mkdir(parents=True, exist_ok=True)
     except PermissionError as e:
@@ -37,7 +37,7 @@ def setup_log() -> logging.Logger:
         logger.info("Log file exist.")
     
     # File Handler
-    file_handler = RotatingFileHandler("logs/main_log.log", encoding="utf-8", maxBytes=1024 * 1024 * 10 * 5, backupCount=0)
+    file_handler = RotatingFileHandler(str(log_path.resolve()), encoding="utf-8", maxBytes=1024 * 1024 * 10 * 5, backupCount=0)
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(logging.Formatter("%(asctime)s-%(levelname)-8s-%(filename)s:%(lineno)d-%(message)s", datefmt=r"%Y-%m-%d %H:%M:%S"))
     logger.addHandler(file_handler)
