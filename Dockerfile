@@ -21,6 +21,9 @@ ENV CRON_SCHEDULE="0 * * * *"
 # Set Time zone
 ENV TZ=Asia/Shanghai
 
+# Set pathon path
+ENV PYTHONPATH=/app
+
 # Add entry bash
 RUN chmod +x /app/start.sh
 
