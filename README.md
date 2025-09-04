@@ -130,7 +130,7 @@ The program needs cookie to avoid api rick management. Please follow the step to
 2. Sign in your account.
 3. Open the developer tools of your browser.
 4. Go to the Network page and select the filter `XHR/Fetch.`
-5. Your will find the cookie string at the `Headers` of some files. Copy it and fill in the `config.json`.
+5. Your will find the cookie string at the `Headers` of some files. Copy it and fill in the `settings.json`.
 
 > [!WARNING]
 >
