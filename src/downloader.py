@@ -84,7 +84,7 @@ def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger, 
 def V_downloader(path_str: str, V: post, Cookie: str, retry_times: int, retry_sec: int, logger: logging.Logger, statistic: str = "") -> int:
     error = 0
     for x in range(1,V.num+1):
-        if V.num > 2:
+        if V.num >= 2:
             name = f"{path_str}_{x}"
         else:
             name = path_str
@@ -92,7 +92,7 @@ def V_downloader(path_str: str, V: post, Cookie: str, retry_times: int, retry_se
             name += ".jpeg"
         else:
             name += ".mp4"
-        if not single_downloader(V.url[x], name, Cookie, logger):
+        if not single_downloader(V.url[x], name, Cookie, logger, retry_times, retry_sec):
             error += 1
     
     # Result
