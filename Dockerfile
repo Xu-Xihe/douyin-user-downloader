@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y cron && rm -rf /var/lib/apt/lists/*
 ENV CRON_SCHEDULE="0 * * * *"
 
 # Add cron job
-RUN echo "$CRON_SCHEDULE root python /app/src/main.py >> /app/logs/cron.log 2>&1" > /etc/cron.d/mycron
+RUN echo "$CRON_SCHEDULE root python /app/main.py >> /app/logs/cron.log 2>&1" > /etc/cron.d/mycron
 RUN chmod 0644 /etc/cron.d/mycron
 RUN crontab /etc/cron.d/mycron
 
