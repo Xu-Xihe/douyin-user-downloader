@@ -47,12 +47,11 @@
             // 2022-11-28 13:09 xxx.mp4
             "new_folder": true,
             // Create a readme file for users to store the details
-            // Only works when "new_folder" is true
             "readme": true,
             // Python expression is supported
             // Key word must be in ${xxxxx}, like ${Hello}. Any space in the key word will be ignored.
-            // If '{', '}', '\', '$' is in the key word, use "\{", "\}", "\\", "\$"
-            // Use not, or, and, () to show a pattern
+            // If '{', '}', '\', '$' is in the key word, use "\{", "\}", "\\", "\$" instead.
+            // Use not, or, and, () to show a pattern.
             // For example, (${Hello} or ${Hi}) and ${Jon} and not ${Harry} means only download posts with "Hello" or "Hi" in the description. "Jon" must inside either but "Harry" must not inside.
             "filter": ""
         } //,

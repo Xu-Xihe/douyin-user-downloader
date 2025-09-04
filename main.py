@@ -114,10 +114,10 @@ for U in settings.users:
     #Get posts data
     user_pin += 1
     P = src.post.get_posts(U.url, main_log)
-    main_log.info(f"Posts info of user {U.nickname if U.nickname else P.nickname} get. {user_pin}/{len(settings.users)}")
     if not P:
         main_log.error(f"Get posts from {U.url} failed!")
         continue
+    main_log.info(f"Posts info of user {U.nickname if U.nickname else P.nickname} get. {user_pin}/{len(settings.users)}")
     
     # Generate save path
     if U.path:
