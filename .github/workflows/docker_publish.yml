@@ -31,18 +31,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set image tags
-        id: vars
+      - name: Set env
         run: |
           TAG=${GITHUB_REF#refs/tags/}
-          IMAGE=ghcr.io/${{ github.repository }}/douyin-user-downloader
+          IMAGE=ghcr.io/Xu-Xihe/douyin-user-downloader/douyin-user-downloader
+
           echo "TAG=$TAG" >> $GITHUB_ENV
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
           # Latest update judge
           if [[ "$TAG" == *"-rc"* ]] || [[ "$TAG" == *"-beta"* ]]; then
             echo "UPDATE_LATEST=false" >> $GITHUB_ENV
           else
             echo "UPDATE_LATEST=true" >> $GITHUB_ENV
+          fi
 
       - name: Restore Docker cache
         uses: actions/cache@v4
