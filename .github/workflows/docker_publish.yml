@@ -12,7 +12,7 @@ jobs:
       contents: read
       packages: write
     env:
-      IMAGE: ghcr.io/xu-xihe/douyin-user-downloader/douyin-user-downloader
+      IMAGE: ghcr.io/xu-xihe/douyin-user-downloader
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
