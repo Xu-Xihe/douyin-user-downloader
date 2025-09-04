@@ -11,7 +11,8 @@ jobs:
     permissions:
       contents: read
       packages: write
-
+    env:
+      IMAGE: ghcr.io/xu-xihe/douyin-user-downloader/douyin-user-downloader
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -33,14 +34,12 @@ jobs:
 
       - name: Set env
         run: |
+          # Tag env
           TAG=${GITHUB_REF#refs/tags/}
-          IMAGE=ghcr.io/Xu-Xihe/douyin-user-downloader/douyin-user-downloader
-
           echo "TAG=$TAG" >> $GITHUB_ENV
-          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
           # Latest update judge
-          if [[ "$TAG" == *"-rc"* ]] || [[ "$TAG" == *"-beta"* ]]; then
+          if [[ "$TAG" =~ -(rc|beta|alpha|dev) ]]; then
             echo "UPDATE_LATEST=false" >> $GITHUB_ENV
           else
             echo "UPDATE_LATEST=true" >> $GITHUB_ENV
