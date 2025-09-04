@@ -8,6 +8,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy program
 COPY . .
 RUN mkdir -p logs
 
@@ -17,13 +18,11 @@ RUN apt-get update && apt-get install -y cron && rm -rf /var/lib/apt/lists/*
 # Time set for cron
 ENV CRON_SCHEDULE="0 * * * *"
 
-# Add cron job
-RUN echo "$CRON_SCHEDULE root python /app/main.py >> /app/logs/cron.log 2>&1" > /etc/cron.d/mycron
-RUN chmod 0644 /etc/cron.d/mycron
-RUN crontab /etc/cron.d/mycron
+# Add entry bash
+RUN chmod +x /app/start.sh
 
 # Holding storage
 VOLUME ["/app/logs"]
 
-# Run cron
-CMD ["cron", "-f"]
+# Run ENTRY bash
+ENTRYPOINT ["/app/start.sh"]
