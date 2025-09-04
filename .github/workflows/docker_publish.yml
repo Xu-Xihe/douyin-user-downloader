@@ -45,14 +45,6 @@ jobs:
             echo "UPDATE_LATEST=true" >> $GITHUB_ENV
           fi
 
-      - name: Restore Docker cache
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-docker-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-docker-
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -62,5 +54,3 @@ jobs:
           tags: |
             ${{ env.IMAGE }}:${{ env.TAG }}
             ${{ env.UPDATE_LATEST == 'true' && format('{0}:latest', env.IMAGE) || '' }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
