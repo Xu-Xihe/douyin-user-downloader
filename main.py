@@ -134,7 +134,7 @@ for U in settings.users:
     dt_user = src.database.find_user(P, U.nickname if U.nickname else P.nickname, cur, main_log)
 
     # Generate readme
-    if U.readme:
+    if U.readme and U.new_folder:
         generate_readme(dt_user, P, U.nickname if U.nickname else P.nickname, U.remark, path_str, settings.cookie, cur, main_log)
 
     # Post download      

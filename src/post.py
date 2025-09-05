@@ -61,9 +61,11 @@ def fetch_post_url(data: dict, logger: logging.Logger) -> post:
                 share.append(url)
                 break
     s = data["desc"].replace("  "," ")
-    s.replace("\n", "")
-    logger.debug(f"Post {s.replace(" #","#")[:5]} {data["aweme_id"]} data get. Total: {num}.")
-    return post(data["aweme_id"], s.replace(" #","#"), share, data["create_time"], type, num)
+    s = s.replace("\n", "")
+    s = s.replace(" #", "#")
+    s = s.replace("/", "_")
+    logger.debug(f"Post {s[:5]} {data["aweme_id"]} data get. Total: {num}.")
+    return post(data["aweme_id"], s, share, data["create_time"], type, num)
 
 def fetch_user_profile(url: str, logger: logging.Logger) -> poster:
     #Get sec_user_id
