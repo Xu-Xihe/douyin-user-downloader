@@ -34,6 +34,7 @@ class poster:
 
 # init
 API = DouyinWebCrawler()
+last = time.time()
 
 def fetch_post_url(data: dict, logger: logging.Logger) -> post:
     if "2" in str(data["media_type"]):
@@ -81,6 +82,9 @@ def fetch_user_profile(url: str, logger: logging.Logger) -> poster:
 
     #Get details
     try:
+        if not time.time() - last > 1:
+            time.sleep(1)
+        last = time.time()
         r = asyncio.run(API.handler_user_profile(sec_user_id))
     except Exception as e:
         logger.error(f"Get user nickname failed: {e}")
@@ -92,7 +96,7 @@ def fetch_user_profile(url: str, logger: logging.Logger) -> poster:
                      user_id        = data["uid"],
                      avatar         = data["avatar_300x300"]["url_list"][0],
                      cover          = data["cover_url"][0]["url_list"][0],
-                     ip             = data["ip_location"],
+                     ip             = data["ip_location"] if "ip_location" in data else "",
                      signature      = data["signature"],
                      gender         = data["gender"],
                      unique_id      = data["unique_id"],
@@ -115,6 +119,9 @@ def get_posts(url: str, logger: logging.Logger) -> poster:
         got = False
         for i in range(6):
             try:
+                if not time.time() - last > 1:
+                    time.sleep(1)
+                last = time.time()
                 r = asyncio.run(API.fetch_user_post_videos(rtn.sec_user_id, cursor, 20))
             except Exception as e:
                 logger.error(f"Get posts failed (retry {i}): {e}")

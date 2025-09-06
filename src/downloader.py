@@ -61,7 +61,7 @@ def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger) 
 
     # Download
     try:
-        r = session.get(url, stream=True, headers=headers)
+        r = session.get(url, stream=True, headers=headers, timeout=(15, 30))
         r.raise_for_status()
     except requests.exceptions.ChunkedEncodingError as e:
         logger.error(f"Error downloading {url}: ChunkedEncodingError {e}")
@@ -91,6 +91,8 @@ def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger) 
         else:
             logger.debug(f"Successfully! Downloaded {path} Link: {url}")
             return True
+    finally:
+        r.close()
     
 def V_downloader(path_str: str, V: post, Cookie: str, logger: logging.Logger, statistic: str = "", task = None) -> int:
     error = 0
