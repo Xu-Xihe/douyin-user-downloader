@@ -119,11 +119,12 @@ def get_posts(url: str, logger: logging.Logger) -> poster:
             except Exception as e:
                 logger.error(f"Get posts failed (retry {i}): {e}")
             else:
-                got = True
                 logger.debug(f"Current page is {page}; cursor is {cursor}.")
             # If empty 
             if "aweme_list" not in r:
                 logger.error(f"Requests suceess but no data in return. Retry {i}.")
+            else:
+                got = True
             if got:
                 break
             else:

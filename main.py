@@ -127,7 +127,7 @@ for U in settings.users:
     if not P:
         main_log.error(f"Get posts from {U.nickname} {U.url} failed!")
         continue
-    main_log.debug(f"Posts info of user {U.nickname if U.nickname else P.nickname} get. {user_pin}/{len(settings.users)}")
+    main_log.debug(f"Posts info of user {U.nickname if U.nickname else P.nickname} get. {P} {user_pin}/{len(settings.users)}")
     
     # Generate save path
     if U.path:

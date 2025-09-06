@@ -29,15 +29,15 @@ def align_unicode(text: str, width: int, align_right: bool) -> str:
     return (" " * space_count + text) if align_right else (text + " " * space_count)
 
 def align_address(country: str, province: str, city: str) -> str:
-    rtn = country
+    rtn = country if country else ""
     if province and country:
         rtn += '-' + province
     else:
-        rtn += province
+        rtn += province if province else ""
     if rtn and city:
         rtn += '-' + city
     else:
-        rtn += city
+        rtn += city if city else ""
     if rtn:
         return rtn
     else:
