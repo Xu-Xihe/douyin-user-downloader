@@ -46,7 +46,7 @@ def setup_log(stream_level, file_level) -> logging.Logger:
     logger.addHandler(stderr_handler)
 
     # Stdout handler
-    if sys.stdout.isatty():
+    if not sys.stdout.isatty():
         stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setLevel(tran_log_level(stream_level))
         stdout_handler.setFormatter(logging.Formatter("{levelname:^7} : {message}", style="{"))
