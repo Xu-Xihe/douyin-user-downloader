@@ -6,6 +6,7 @@ import sys
 import rich.progress as pgs
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from src.progress import pg
 from src.post import post
 from src.align_unicode import align_unicode
 
@@ -74,20 +75,16 @@ def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger, 
     else:
         total = int(r.headers.get("Content-Length", 0))
         try:
-            with open(path, "wb") as f, pgs.Progress(
-                pgs.SpinnerColumn(spinner_name="dots7", finished_text=""),
-                "[bold blue]{task.description}",
-                pgs.BarColumn(),
-                "[progress.percentage]{task.percentage:>3.2f}%",
-                pgs.DownloadColumn(),
-                pgs.TransferSpeedColumn(),
-                pgs.TimeRemainingColumn(),
-                transient=True
-            ) as progress:
-                task = progress.add_task(description=str(pathlib.Path(path).name), total=total)
+            with open(path, "wb") as f:
+                if pg.isatty():
+                    pg.new(2)
+                    task = pg.execute(2).add_task(description=str(pathlib.Path(path).name), total=total)
+                    pg.live().update(pg.get_group())
                 for chunk in r.iter_content(chunk_size=8192):
                     f.write(chunk)
-                    progress.update(task, advance=len(chunk))
+                    if pg.isatty():
+                        pg.execute(2).update(task, advance=len(chunk))
+                pg.stop(2)
         except IOError as e:
             logger.error(f"Single_downloader: Error writing to file {path}: {e}")
             return False
@@ -95,11 +92,9 @@ def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger, 
             logger.debug(f"Successfully! Downloaded {path} Link: {url}")
             return True
     
-def V_downloader(path_str: str, V: post, Cookie: str, retry_times: int, retry_sec: int, logger: logging.Logger, statistic: str = "", progress = None, task = None) -> int:
+def V_downloader(path_str: str, V: post, Cookie: str, retry_times: int, retry_sec: int, logger: logging.Logger, statistic: str = "", task = None) -> int:
     error = 0
     for x in range(1,V.num+1):
-        if sys.stdout.isatty() and progress and task:
-            progress.update(task, advance=1)
         if V.num >= 2:
             name = f"{path_str}_{x}"
         else:
@@ -110,6 +105,8 @@ def V_downloader(path_str: str, V: post, Cookie: str, retry_times: int, retry_se
             name += ".mp4"
         if not single_downloader(V.url[x], name, Cookie, logger, retry_times, retry_sec):
             error += 1
+        elif pg.isatty() and task:
+            pg.execute(1).update(task, advance=1)
     
     # Result
     if error == 0:

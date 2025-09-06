@@ -13,11 +13,11 @@ args = src.args.setup_args()
 import sqlite3
 import json5
 import yaml
-import rich.progress as pgs
 from pydantic import BaseModel
 from src.logger import setup_log
 from src.align_unicode import align_unicode
 from src.readme import generate_readme
+from src.progress import pg
 import src.downloader
 import src.filter
 import src.post
@@ -112,24 +112,16 @@ if src.args.exe_args(args, cur, main_log):
 if not settings.cookie:
     main_log.warning("Cookie required. Post may not download without it.")
 
-# Set up user_progress
-if sys.stdout.isatty():
-    user_progress = pgs.Progress(
-        "[red]",
-        pgs.SpinnerColumn(spinner_name="simpleDotsScrolling", finished_text="[green]✔"),
-        "[orange]Downloading user {task.description}",
-        pgs.BarColumn(),
-        "[bold green]{task.completed}/{task.total}",
-        "[purple]",
-        pgs.TimeElapsedColumn(),
-        transient=False
-    )
-    user_progress.start()
+# Set up progress & live
+if pg.isatty():
+    pg.live().start()
+    pg.new(0)
 
 for U in settings.users:
     # Add user_progress task
-    if sys.stdout.isatty():
-        task_user = user_progress.add_task(total=None)
+    if pg.isatty():
+        task_user = pg.execute(0).add_task(description="", total=None)
+        pg.live().update(pg.get_group())
 
     # Get posts data
     user_pin += 1
@@ -158,21 +150,9 @@ for U in settings.users:
         generate_readme(dt_user, P, U.nickname if U.nickname else P.nickname, U.remark, path_str, settings.cookie, cur, main_log)
     
     # Update user_progress task
-    if sys.stdout.isatty():
-        user_progress.start_task(task_user)
-        user_progress.update(task_user, advance=1, total=len(P.posts), description=f"{P.nickname}[bold orange] {user_pin}/{len(settings.users)}[purple]")
-        post_progress=pgs.Progress(
-            "[yellow]    ",
-            pgs.SpinnerColumn(spinner_name="line", finished_text="✅"),
-            "[pink]Downloading post {task.description}",
-            pgs.BarColumn(),
-            "[bold green]{task.completed}/{task.total}",
-            "[purple]",
-            pgs.TimeElapsedColumn(),
-            "{task.fields[status]}",
-            transient=False
-        )
-        post_progress.start()
+    if pg.isatty():
+        pg.new(1)
+        pg.execute(0).update(task_user, total=len(P.posts), description=f"{P.nickname}[bold orange] {user_pin}/{len(settings.users)}")
     
     # Post download      
     main_log.debug(f"User {P.nickname if U.nickname == "" else U.nickname} {P.sec_user_id} Save_path: {path_str} downloading... ")
@@ -180,8 +160,9 @@ for U in settings.users:
     for V in P.posts:
         # init
         num += 1
-        if sys.stdout.isatty():
-            post_task = post_progress.add_task(description=V.desc[:6], status="[yellow]Checking...", total=None)
+        if pg.isatty():
+            post_task = pg.execute(1).add_task(description=V.desc[:10], status="[yellow]Checking...", total=None)
+            pg.live().update(pg.get_group())
 
         # Database Check
         fit = src.filter.filter(V.desc, U.filter, main_log) and src.filter.time_limit(V.date, U.time_limit, main_log)
@@ -190,41 +171,44 @@ for U in settings.users:
         if (fit and exist_V == 1) or (fit and settings.retry_downloaded and exist_V == 2):
             # Make download dir
             mkdir = src.downloader.mkdir_download_path(V, path_str, U.separate_limit, settings.date_format, settings.desc_length, main_log)
-            if not mkdir:
-                continue
-            
-            # Download post
-            if sys.stdout.isatty():
-                post_progress.start_task(post_task)
-                post_progress.update(post_task, status="[green]processing...", total=V.num)
-
-            download_error = src.downloader.V_downloader(mkdir, V, settings.cookie, settings.retry, settings.retry_sec, main_log, f"{num}/{len(P.posts)}", post_progress, post_task)
-            if download_error:
-                error_p += 1
-                error_f += download_error
-                try:
-                    error_u.index(P.nickname)
-                except ValueError:
-                    error_u.append(P.nickname)
-                if sys.stdout.isatty():
-                    post_progress.update(post_task, status="[bold red]Error")
+            if mkdir:
+                # Download posts
+                if pg.isatty():
+                    pg.execute(1).update(post_task, status="[green]processing...", total=V.num)
+                    download_error = src.downloader.V_downloader(mkdir, V, settings.cookie, settings.retry, settings.retry_sec, main_log, f"{num}/{len(P.posts)}", post_task)
+                else:
+                    download_error = src.downloader.V_downloader(mkdir, V, settings.cookie, settings.retry, settings.retry_sec, main_log, f"{num}/{len(P.posts)}")
+                if download_error:
+                    error_p += 1
+                    error_f += download_error
+                    try:
+                        error_u.index(P.nickname)
+                    except ValueError:
+                        error_u.append(P.nickname)
+                    if pg.isatty():
+                        pg.execute(1).update(post_task, status="[bold red]Error")
+                else:
+                    src.database.download_V(P.user_id, V.aweme_id, cur, main_log)
+                    if pg.isatty():
+                        pg.execute(1).update(post_task, status="[bold green]Done")
+                download_p += 1
+                download_f += V.num
             else:
-                src.database.download_V(P.user_id, V.aweme_id, cur, main_log)
-                if sys.stdout.isatty():
-                    post_progress.update(post_task, status="[bold green]Done")
-            download_p += 1
-            download_f += V.num
+                main_log.error(f"Make dir failed: {V.aweme_id} {V.desc[:6]}")
+                if pg.isatty():
+                    pg.execute(1).update(post_task, total=0, status="[bold red]Dir Error")
+                continue
         else:
-            # log
-            if sys.stdout.isatty():
-                post_progress.start_task(post_task)
-                post_progress.update(post_task, status="[bold blue]Skip", total=0)
+            if pg.isatty():
+                pg.execute(1).update(post_task, status="[bold purple]Skip", total=0)
             main_log.debug(f"Post {V.aweme_id} {align_unicode(V.desc[:8], 20, False)} skip download. {num}/{len(P.posts)}")
-    post_progress.stop()
+        if pg.isatty():
+            pg.execute(0).update(task_user, advance=1)
     main_log.info(f"User {align_unicode(U.nickname if U.nickname else P.nickname, 20, False)} {P.sec_user_id} is done!")
 
-# Stop user progress
-user_progress.stop()
+if pg.isatty():
+    pg.new(2)
+    pg.live().stop()
 
 # Close database
 cur.close()

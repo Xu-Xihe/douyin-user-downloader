@@ -55,7 +55,7 @@ def add_history(title: str, new_value, old: list, f: io.TextIOWrapper, add: bool
             if (title == "Avatar" or title == "Cover"):
                 f.write(f"""
     <p align="center">
-    <img src="./{str.lower(title)}/{str.lower(title)}{abs(new_value)}.jpeg" alt="{str.lower(title)}" />
+    <img src="./.{str.lower(title)}/{str.lower(title)}{abs(new_value)}.jpeg" alt="{str.lower(title)}" />
     </p>\n\n""")
             else:
                 f.write(f" {new_value}\n\n")
@@ -97,7 +97,7 @@ def generate_readme(histroy: list, U: poster, nickname: str, remark: str, path_s
             f.write(f"""# {nickname if nickname else U.nickname}
 
 <p align="center">
-  <img src="./avatar/avatar{abs(num_avatar)}.jpeg" alt="avatar" />
+  <img src="./.avatar/avatar{abs(num_avatar)}.jpeg" alt="avatar" />
 </p>
                     
 | <span style="color: purple;"><b>Item</b></span> | <span style="color: purple;"><b>Content</b></span> |
@@ -115,7 +115,7 @@ def generate_readme(histroy: list, U: poster, nickname: str, remark: str, path_s
 | sec_user_id | {U.sec_user_id} |
 
 <p align="center">
-  <img src="./cover/cover{abs(num_cover)}.jpeg" alt="" />
+  <img src="./.cover/cover{abs(num_cover)}.jpeg" alt="" />
 </p>
 ## Update history
 

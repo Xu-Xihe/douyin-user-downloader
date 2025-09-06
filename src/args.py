@@ -2,6 +2,7 @@ import argparse
 import os
 import logging
 import sqlite3
+from src.progress import pg
 
 def setup_args() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Download posts and users from Douyin.com Caution: When any is chosen, program won't download users in the settings.json.")
@@ -72,6 +73,9 @@ def exe_args(args: argparse.Namespace, cur: sqlite3.Cursor, logger: logging.Logg
         import src.filter
         from src.readme import generate_readme
         from src.align_unicode import align_unicode
+        if pg.isatty():
+            pg.live().start()
+            pg.new(0)
 
     # Cookie
     if not args.cookie:
@@ -79,12 +83,19 @@ def exe_args(args: argparse.Namespace, cur: sqlite3.Cursor, logger: logging.Logg
 
     # Users
     if args.user:
+        # init
         error = 0
         user_pin = 0
+
         for url in args.user:
             if "http" not in url:
                 continue
-
+            
+            # Add user_progress task
+            if pg.isatty():
+                task_user = pg.execute(0).add_task(description="", total=None)
+                pg.live().update(pg.get_group())
+            
             # Statistics
             user_pin += 1
             post_pin = 0
@@ -99,18 +110,47 @@ def exe_args(args: argparse.Namespace, cur: sqlite3.Cursor, logger: logging.Logg
             # Readme
             if args.readme:
                 generate_readme([], U, U.nickname, "", args.path + '/' + U.nickname, args.cookie, cur, logger)
-
+            
+            # Update user_progress task
+            if pg.isatty():
+                pg.new(1)
+                pg.execute(0).update(task_user, total=len(U.posts), description=f"{U.nickname}[bold orange] {user_pin}/{len(args.user)}")
+            
             # Download posts
             for P in U.posts:
+                # init
                 post_pin += 1
+                if pg.isatty():
+                    post_task = pg.execute(1).add_task(description=P.desc[:10], status="[yellow]Checking...", total=None)
+                    pg.live().update(pg.get_group())
+                
+                # filter check
                 if src.filter.filter(P.desc, args.filter, logger) and src.filter.time_limit(P.date, args.time, logger):
                     down = src.downloader.mkdir_download_path(P, args.path + '/' + U.nickname, args.separate_limit, r"%Y-%m-%d", args.desc_length, logger)
                     if down:
-                        error += src.downloader.V_downloader(down, P, args.cookie, 3, 3, logger, f"{post_pin}/{len(U.posts)}")
+                        # Download posts
+                        if pg.isatty():
+                            pg.execute(1).update(post_task, status="[green]processing...", total=P.num)
+                            download_error = src.downloader.V_downloader(down, P, args.cookie, 3, 3, logger, f"{post_pin}/{len(U.posts)}", post_task)
+                        else:
+                            download_error = src.downloader.V_downloader(down, P, args.cookie, 3, 3, logger, f"{post_pin}/{len(U.posts)}")
+                        if download_error:
+                            error += download_error
+                            if pg.isatty():
+                                pg.execute(1).update(post_task, status="[bold red]Error")
+                        else:
+                            if pg.isatty():
+                                pg.execute(1).update(post_task, status="[bold green]Done")
                     else:
+                        if pg.isatty():
+                            pg.execute(1).update(post_task, total=0, status="[bold red]Dir Error")
                         continue
                 else:
+                    if pg.isatty():
+                        pg.execute(1).update(post_task, status="[bold purple]Skip", total=0)
                     logger.info(f"Post {P.aweme_id} {align_unicode(P.desc[:8], 20, False)} skip download. {post_pin}/{len(U.posts)}")
+                if pg.isatty():
+                    pg.execute(0).update(task_user, advance=1)
         if error:
             logger.error(f"Download users finished. Error: {error}")
         else:
@@ -118,22 +158,56 @@ def exe_args(args: argparse.Namespace, cur: sqlite3.Cursor, logger: logging.Logg
 
     # Post
     if args.post:
+        # init
         error = 0
         post_pin = 0
+        if pg.isatty():
+                pg.new(1)
+
         for url in args.post:
             if "http" not in url:
                 continue
+
+            # init
             post_pin += 1
+            if pg.isatty():
+                post_task = pg.execute(1).add_task(description="", status="[yellow]Checking...", total=None)
+                pg.live().update(pg.get_group())
+            
             P = src.post.get_single_post(url, logger)
-            down = src.downloader.mkdir_download_path(P, args.path, args.separate_limit, r"%Y-%m-%d", args.desc_length, logger)
-            if down:
-                error += src.downloader.V_downloader(down, P, args.cookie, 3, 3, logger, f"{post_pin}/{len(args.post)}")
+            if P:
+                down = src.downloader.mkdir_download_path(P, args.path, args.separate_limit, r"%Y-%m-%d", args.desc_length, logger)
+                if down:
+                    if pg.isatty():
+                        pg.execute(1).update(post_task, status="[green]processing...", total=P.num, description=P.desc[:10])
+                        download_error = src.downloader.V_downloader(down, P, args.cookie, 3, 3, logger, f"{post_pin}/{len(args.post)}", post_task)
+                    else:
+                        download_error = src.downloader.V_downloader(down, P, args.cookie, 3, 3, logger, f"{post_pin}/{len(args.post)}")
+                    if download_error:
+                        error += download_error
+                        if pg.isatty():
+                                pg.execute(1).update(post_task, status="[bold red]Error")
+                    else:
+                        if pg.isatty():
+                            pg.execute(1).update(post_task, status="[bold green]Done")
+                else:
+                    logger.error(f"Make dir failed: {P.aweme_id} {P.desc[:6]}")
+                    if pg.isatty():
+                        pg.execute(1).update(post_task, total=0, status="[bold red]Dir Error", description=P.desc[:10])
+                    continue
             else:
-                continue
+                logger.error("Get post error!")
+                if pg.isatty():
+                    pg.execute(1).update(post_task, status="[bold red]Get Post Error", total=0)
         if error:
             logger.error(f"Download posts finished. Error: {error}")
         else:
             logger.info(f"Download posts finished. All success! Total: {post_pin}")
+
+    # Stop live
+    if (args.user or args.post) and pg.isatty():
+        pg.new(2)
+        pg.live().stop()
 
     # Database
     if args.list:
