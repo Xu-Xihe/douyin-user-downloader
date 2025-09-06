@@ -16,11 +16,6 @@
     // The length of description of the video in the file name
     // The abs value is the length and if negative, all letter behind '#' will be abandoned.
     "desc_length": -15,
-    
-    // Retry times when failed
-    "retry_times": 3,
-    // Seconds between each try
-    "retry_sec": 3,
 
     // Users to download
     "users": [

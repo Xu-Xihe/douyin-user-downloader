@@ -43,8 +43,6 @@ class setting(BaseModel):
     users: list[user]
     cookie: str
     retry_downloaded: bool = True
-    retry: int = 3
-    retry_sec: int = 3
     stream_level: str = "WARNING"
     file_level: str = "INFO"
     # Allow self class
@@ -175,9 +173,9 @@ for U in settings.users:
                 # Download posts
                 if pg.isatty():
                     pg.execute(1).update(post_task, status="[green]processing...", total=V.num)
-                    download_error = src.downloader.V_downloader(mkdir, V, settings.cookie, settings.retry, settings.retry_sec, main_log, f"{num}/{len(P.posts)}", post_task)
+                    download_error = src.downloader.V_downloader(mkdir, V, settings.cookie, main_log, f"{num}/{len(P.posts)}", post_task)
                 else:
-                    download_error = src.downloader.V_downloader(mkdir, V, settings.cookie, settings.retry, settings.retry_sec, main_log, f"{num}/{len(P.posts)}")
+                    download_error = src.downloader.V_downloader(mkdir, V, settings.cookie, main_log, f"{num}/{len(P.posts)}")
                 if download_error:
                     error_p += 1
                     error_f += download_error
@@ -205,6 +203,13 @@ for U in settings.users:
         if pg.isatty():
             pg.execute(0).update(task_user, advance=1)
     main_log.info(f"User {align_unicode(U.nickname if U.nickname else P.nickname, 20, False)} {P.sec_user_id} is done!")
+    if settings.database:
+        try:
+            dtbe.commit()
+        except sqlite3.OperationalError as e:
+            main_log.error(f"Commit to database failed: OperationalError {e}")
+        except sqlite3.Error as e:
+            main_log.error(f"Commit to database failed: {e}")
 
 if pg.isatty():
     pg.new(2)
@@ -212,13 +217,6 @@ if pg.isatty():
 
 # Close database
 cur.close()
-if settings.database:
-    try:
-        dtbe.commit()
-    except sqlite3.OperationalError as e:
-        main_log.error(f"Commit to database failed: OperationalError {e}")
-    except sqlite3.Error as e:
-        main_log.error(f"Commit to database failed: {e}")
 dtbe.close()
 
 # Statistics

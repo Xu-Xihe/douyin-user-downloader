@@ -41,7 +41,7 @@ def setup_args() -> argparse.ArgumentParser:
 
     # Version
     version = parser.add_argument_group("Version")
-    version.add_argument("-v", "--version", action='version', version='V1.3.2', help="Show program's version")
+    version.add_argument("-v", "--version", action='version', version='V1.3.3', help="Show program's version")
 
     # Get args && Args in file
     args = parser.parse_args()
@@ -131,9 +131,9 @@ def exe_args(args: argparse.Namespace, cur: sqlite3.Cursor, logger: logging.Logg
                         # Download posts
                         if pg.isatty():
                             pg.execute(1).update(post_task, status="[green]processing...", total=P.num)
-                            download_error = src.downloader.V_downloader(down, P, args.cookie, 3, 3, logger, f"{post_pin}/{len(U.posts)}", post_task)
+                            download_error = src.downloader.V_downloader(down, P, args.cookie, logger, f"{post_pin}/{len(U.posts)}", post_task)
                         else:
-                            download_error = src.downloader.V_downloader(down, P, args.cookie, 3, 3, logger, f"{post_pin}/{len(U.posts)}")
+                            download_error = src.downloader.V_downloader(down, P, args.cookie, logger, f"{post_pin}/{len(U.posts)}")
                         if download_error:
                             error += download_error
                             if pg.isatty():
@@ -180,9 +180,9 @@ def exe_args(args: argparse.Namespace, cur: sqlite3.Cursor, logger: logging.Logg
                 if down:
                     if pg.isatty():
                         pg.execute(1).update(post_task, status="[green]processing...", total=P.num, description=P.desc[:10])
-                        download_error = src.downloader.V_downloader(down, P, args.cookie, 3, 3, logger, f"{post_pin}/{len(args.post)}", post_task)
+                        download_error = src.downloader.V_downloader(down, P, args.cookie, logger, f"{post_pin}/{len(args.post)}", post_task)
                     else:
-                        download_error = src.downloader.V_downloader(down, P, args.cookie, 3, 3, logger, f"{post_pin}/{len(args.post)}")
+                        download_error = src.downloader.V_downloader(down, P, args.cookie, logger, f"{post_pin}/{len(args.post)}")
                     if download_error:
                         error += download_error
                         if pg.isatty():

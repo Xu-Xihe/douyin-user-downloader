@@ -40,7 +40,7 @@ def mkdir_download_path(post_info: post, path_str: str, separate_limit: int, dat
     else:
         return str(path / name)
     
-def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger, retry_times: int = 3, retry_sec: int = 3) -> bool:
+def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger) -> bool:
     # Set headers
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.212 Safari/537.36",
@@ -50,8 +50,8 @@ def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger, 
 
     # Set retry strategy
     retry_strategy = Retry(
-    total=retry_times,
-    backoff_factor=retry_sec,
+    total=4,
+    backoff_factor=2,
     status_forcelist=[500, 502, 503, 504],
     allowed_methods=["HEAD", "GET", "OPTIONS", "POST"])
     adapter = HTTPAdapter(max_retries=retry_strategy)
@@ -92,7 +92,7 @@ def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger, 
             logger.debug(f"Successfully! Downloaded {path} Link: {url}")
             return True
     
-def V_downloader(path_str: str, V: post, Cookie: str, retry_times: int, retry_sec: int, logger: logging.Logger, statistic: str = "", task = None) -> int:
+def V_downloader(path_str: str, V: post, Cookie: str, logger: logging.Logger, statistic: str = "", task = None) -> int:
     error = 0
     for x in range(1,V.num+1):
         if V.num >= 2:
@@ -103,7 +103,7 @@ def V_downloader(path_str: str, V: post, Cookie: str, retry_times: int, retry_se
             name += ".jpeg"
         else:
             name += ".mp4"
-        if not single_downloader(V.url[x], name, Cookie, logger, retry_times, retry_sec):
+        if not single_downloader(V.url[x], name, Cookie, logger):
             error += 1
         elif pg.isatty() and task:
             pg.execute(1).update(task, advance=1)
