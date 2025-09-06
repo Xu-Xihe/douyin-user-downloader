@@ -1,45 +1,55 @@
 import logging
-from rich.logging import RichHandler
-from logging.handlers import RotatingFileHandler
+import sys
+from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
-def setup_log() -> logging.Logger:
+def tran_log_level(level: str):
+    if level == "DEBUG":
+        return logging.DEBUG
+    if level == "INFO":
+        return logging.INFO
+    if level == "WARNING":
+        return logging.WARNING
+    if level == "ERROR":
+        return logging.ERROR
+    print("Log Level Value Error.")
+    sys.exit(1)
+
+def setup_log(stream_level, file_level) -> logging.Logger:
     # Get logger
     logger = logging.getLogger("main_log")
     logger.setLevel(logging.DEBUG)
 
-    # Console Handler
-    console_handler = RichHandler(
-        level=logging.INFO,
-        show_path=True,
-        rich_tracebacks=True,
-        enable_link_path=True,
-        )
-    console_handler.setFormatter(logging.Formatter("%(message)s", datefmt=r"[%X]"))
-    logger.addHandler(console_handler)
-    logger.info("Program Start\n")
-
-    # Mkdir log
-    log_path = Path(__file__).resolve().parent.parent / "logs/main_log.log"
-    try:
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-    except PermissionError as e:
-        logger.error(f"Make dir at path {log_path.parent.resolve()} failed! Permission deny.")
-    # Create log file
-    if not log_path.exists():
-        try:
-            log_path.touch()
-        except PermissionError as e:
-            logger.error("Create log file failed! Permission deny.")
-        else:
-            logger.info("Create log file success.")
-    else:
-        logger.info("Log file exist.")
+    # Make log dir
+    log_path = Path(__file__).resolve().parent.parent / "data/main.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     
     # File Handler
-    file_handler = RotatingFileHandler(str(log_path.resolve()), encoding="utf-8", maxBytes=1024 * 1024 * 10 * 5, backupCount=0)
-    file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(logging.Formatter("%(asctime)s-%(levelname)-8s-%(filename)s:%(lineno)d-%(message)s", datefmt=r"%Y-%m-%d %H:%M:%S"))
+    file_handler = TimedRotatingFileHandler(
+        log_path,
+        when="midnight",
+        interval=1,
+        backupCount=7,
+        encoding="utf-8"
+    )
+    file_handler.setLevel(tran_log_level(file_level))
+    file_handler.setFormatter(logging.Formatter("{asctime}-{levelname:^7}-{filename}-{lineno} : {message}", style="{", datefmt=r"%Y-%m-%d %H:%M:%S"))
     logger.addHandler(file_handler)
+
+    # Stderr handler
+    stderr_handler = logging.StreamHandler(sys.stderr)
+    if stream_level == "ERROR":
+        stderr_handler.setLevel(logging.ERROR)
+    else:
+        stderr_handler.setLevel(logging.WARNING)
+    stderr_handler.setFormatter(logging.Formatter("{levelname:^7}-{filename}-{lineno}: {message}", style="{"))
+    logger.addHandler(stderr_handler)
+
+    # Stdout handler
+    if sys.stdout.isatty():
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        stdout_handler.setLevel(tran_log_level(stream_level))
+        stdout_handler.setFormatter(logging.Formatter("{levelname:^7} : {message}", style="{"))
+        logger.addHandler(stdout_handler)
 
     return logger

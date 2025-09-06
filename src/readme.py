@@ -63,8 +63,8 @@ def add_history(title: str, new_value, old: list, f: io.TextIOWrapper, add: bool
 
 def generate_readme(histroy: list, U: poster, nickname: str, remark: str, path_str:str, Cookie: str, cur:sqlite3.Cursor, logger: logging.Logger):
     path_readme = pathlib.Path(path_str).expanduser() / "readme.md"
-    path_cover = pathlib.Path(path_str).expanduser() / "cover"
-    path_avatar = pathlib.Path(path_str).expanduser() / "avatar"
+    path_cover = pathlib.Path(path_str).expanduser() / ".cover"
+    path_avatar = pathlib.Path(path_str).expanduser() / ".avatar"
     path_cover.mkdir(parents=True, exist_ok=True)
     path_avatar.mkdir(parents=True, exist_ok=True)
     num_cover = find_largest_file(path_cover,"cover")
@@ -75,10 +75,10 @@ def generate_readme(histroy: list, U: poster, nickname: str, remark: str, path_s
     src.downloader.single_downloader(U.cover,
                                      f"{str(path_cover.resolve())}/cover{num_cover + 1}.jpeg",
                                      Cookie, logger)
-    if diff_img(str(path_avatar.resolve()) + f"/avatar{num_avatar}.jpeg", str(path_avatar.resolve()) + f"/avatar{num_avatar + 1}.jpeg"):
+    if diff_img(f"{str(path_avatar.resolve())}/avatar{num_avatar}.jpeg", f"{str(path_avatar.resolve())}/avatar{num_avatar + 1}.jpeg"):
         num_avatar += 1
         num_avatar *= -1
-    if diff_img(str(path_cover.resolve()) + f"/cover{num_cover}.jpeg", str(path_cover.resolve()) + f"/cover{num_cover + 1}.jpeg"):
+    if diff_img(f"{str(path_cover.resolve())}/cover{num_cover}.jpeg", f"{str(path_cover.resolve())}/cover{num_cover + 1}.jpeg"):
         num_cover += 1
         num_cover *= -1
     old = []

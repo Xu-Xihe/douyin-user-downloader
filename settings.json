@@ -6,6 +6,11 @@
     // The download results are restored. Program can retry the failed ones.
     "retry_downloaded": true,
 
+    // Set log level
+    // DEBUG, INFO, WARNING, ERROR
+    "stream_level": "WARNING",
+    "file_level": "INFO",
+
     // Date formate
     "date_format": "%Y-%m-%d",
     // The length of description of the video in the file name

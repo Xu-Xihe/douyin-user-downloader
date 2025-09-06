@@ -72,11 +72,13 @@ docker run -d --name douyin-user-downloader -v /path/to/file/settings.json:/app/
 
 #### 2 Cron Schedule
 
+The cron schedule can be changed by adding the option `-e` to `docker run`.
+
 ```bash
 -e CRON_SCHEDULE="your schedule"
 ```
 
-Default is `CRON_SCHEDULE="0 * * * *"`.
+Default is `CRON_SCHEDULE="0 8,20 * * *"`.
 
 ### Local Installation
 
@@ -140,53 +142,63 @@ The program needs cookie to avoid api rick management. Please follow the step to
 
 `"users":[]`:
 
-​	**Value:** LIST
+​        **Value:** LIST
 
-​	**Required:** ✅
+​        **Required:** ✅
 
-​	**Description:** Users for download.
+​        **Description:** Users for download.
 
 `"cookie": ""`:
 
-​	**Value:** Str
+​        **Value:** Str
 
-​	**Required:** ✅
+​        **Required:** ✅
 
-​	**Description:** Enter your Douyin cookie here.
+​        **Description:** Enter your Douyin cookie here.
 
 `"database": true`:
 
-​	**Value:** BOOL
+​        **Value:** BOOL
 
-​	**Required:** ❌
+​        **Required:** ❌
 
-​	**Description:** Enable the database-relatied functions. If false, the operation will still be excused but the changes will not be committed.
+​        **Description:** Enable the database-relatied functions. If false, the operation will still be excused but the changes will not be committed.
 
 `"default_path": "Downloads/"`:
 
-​	**Value:** Path_Str
+​        **Value:** Path_Str
 
-​	**Required:** ❌
+​        **Required:** ❌
 
-​	**Description:** The default path for download files. Resolve path is recommended in docker container. Use '/', even on Windows.
+​        **Description:** The default path for download files. Resolve path is recommended in docker container. Use '/', even on Windows.
 
 `"retry_downloaded": true`:
 
-​	**Value:** BOOL
+​        **Value:** BOOL
 
-​	**Required:** ❌
+​        **Required:** ❌
 
-​	**Description:** Retry the failed download task that recorded in the database.
+​        **Description:** Retry the failed download task that recorded in the database.
+
+`"stream_level": "WARNING"` & `"file_level": "INFO"`:
+
+​        **Value:** Str
+
+​        **Required:** ❌
+
+​        **Description:** Set the log level for stdout and file.
+
+​        **Option:** `DEBUG`, `INFO`, `WARNING`, `ERROR`.
 
 `"date_format": "%Y-%m-%d"`:
 
-​	**Value:** Str
+​        **Value:** Str
 
-​	**Required:** ❌
+​        **Required:** ❌
 
-​	**Description:** The format of data in the name of download files.
+​        **Description:** The format of data in the name of download files.
 
-​	**Parameters:**
+​        **Parameters:**
 
 | **Parameter** | **Value** | **Parameter** | **Value** |
 | ------------- | --------- | ------------- | --------- |
@@ -196,37 +208,37 @@ The program needs cookie to avoid api rick management. Please follow the step to
 
 `"desc_length": -15`:
 
-​	**Value:** INT
+​        **Value:** INT
 
-​	**Required:** ❌
+​        **Required:** ❌
 
-​	**Description:** The length of description in the name of download files. If it is negative, all content after '#' will be abandoned.
+​        **Description:** The length of description in the name of download files. If it is negative, all content after '#' will be abandoned.
 
 `"retry_times": 3`:
 
-​	**Value:** INT
+​        **Value:** INT
 
-​	**Required:** ❌
+​        **Required:** ❌
 
-​	**Description:** Maximum times of retrying after download failed.
+​        **Description:** Maximum times of retrying after download failed.
 
 `"retry_sec": 3`:
 
-​	**Value:** INT
+​        **Value:** INT
 
-​	**Required:** ❌
+​        **Required:** ❌
 
-​	**Description:** Seconds between each retry. Exponential backoff.
+​        **Description:** Seconds between each retry. Exponential backoff.
 
 #### users
 
 `"url": ""`:
 
-​	**Value:** Str
+​        **Value:** Str
 
-​	**Required:** ✅
+​        **Required:** ✅
 
-​	**Description:** The url of user post page, shaped like "https://www.douyin.com/user/xxx" or "https://v.douyin.com/xxx".
+​        **Description:** The url of user post page, shaped like "https://www.douyin.com/user/xxx" or "https://v.douyin.com/xxx".
 
 > [!WARNING]
 >
@@ -234,72 +246,72 @@ The program needs cookie to avoid api rick management. Please follow the step to
 
 `"nickname": ""`:
 
-​	**Value:** Str
+​        **Value:** Str
 
-​	**Required:** ❌
+​        **Required:** ❌
 
-​	**Description:** Custom alias. Use for logs and folder name. Empty for default nickname.
+​        **Description:** Custom alias. Use for logs and folder name. Empty for default nickname.
 
 `"path": ""`:
 
-​	**Value:** Path_Str
+​        **Value:** Path_Str
 
-​	**Required:** ❌
+​        **Required:** ❌
 
-​	**Description:** Custom download path. Empty for `"default_path"`.
+​        **Description:** Custom download path. Empty for `"default_path"`.
 
 `"remark": ""`:
 
-​	**Value:** Str
+​        **Value:** Str
 
-​	**Required:** ❌
+​        **Required:** ❌
 
-​	**Description:** This str will be added to the readme.md. `"readme"` should be set to true.
+​        **Description:** This str will be added to the readme.md. `"readme"` should be set to true.
 
 `"time_limit": ""`:
 
-​	**Value:** Str
+​        **Value:** Str
 
-​	**Required:** ❌
+​        **Required:** ❌
 
-​	**Description:** Only download the post which posted inside the interval.
+​        **Description:** Only download the post which posted inside the interval.
 
-​	**Date Format:** **"Year.Month.Day"** or **"Year.Month.Day Hour:Minute:Second"**. The hour, minute and second is optional. They will be set to 00:00:00 as default.
+​        **Date Format:** **"Year.Month.Day"** or **"Year.Month.Day Hour:Minute:Second"**. The hour, minute and second is optional. They will be set to 00:00:00 as default.
 
-​	**Format:** **"Start-End"**. Keep any boundary empty for no limitaion.
+​        **Format:** **"Start-End"**. Keep any boundary empty for no limitaion.
 
-​	**Example:** 
+​        **Example:** 
 
-			- "2024.9.1-2025.9.1"
-			- "-2025.3.1"
-			- "2025.1.1-"
-			- "2024.9.3 20:12:3-2025.3.9 2:21:3"
+	                - "2024.9.1-2025.9.1"
+	                - "-2025.3.1"
+	                - "2025.1.1-"
+	                - "2024.9.3 20:12:3-2025.3.9 2:21:3"
 
 `"separate_limit": 2`:
 
-​	**Value:** INT
+​        **Value:** INT
 
-​	**Required:** ❌
+​        **Required:** ❌
 
-​	**Description:** If the files in a single post is more or equal to this num, they will be put in a single folder.
+​        **Description:** If the files in a single post is more or equal to this num, they will be put in a single folder.
 
 `"new_folder": true`:
 
-​	**Value:** BOOL
+​        **Value:** BOOL
 
-​	**Required:** ❌
+​        **Required:** ❌
 
-​	**Description:** Make new folder in the path for download.
+​        **Description:** Make new folder in the path for download.
 
-​	**Example:** 
+​        **Example:** 
 
 - True:
 
 	-user
 
-​	-2022-11-28 13:09 xxx.mp4
+​        -2022-11-28 13:09 xxx.mp4
 
-​	-2022-11-28 13:09 xxx.mp4
+​        -2022-11-28 13:09 xxx.mp4
 
 - False
 
@@ -309,28 +321,28 @@ The program needs cookie to avoid api rick management. Please follow the step to
 
 `"readme": true`:
 
-​	**Value:** BOOL
+​        **Value:** BOOL
 
-​	**Required:** ❌
+​        **Required:** ❌
 
-​	**Description:** Create a readme file for users to store the details.
+​        **Description:** Create a readme file for users to store the details.
 
 `"filter": ""`:
 
-​	**Value:** Str
+​        **Value:** Str
 
-​	**Required:** ❌
+​        **Required:** ❌
 
-​	**Description:** Select which posts from a user to download.
+​        **Description:** Select which posts from a user to download.
 
-​	**Format:** 
+​        **Format:** 
 
-- Key word must be in **${xxxxx}**.
+- Key word must be in `${xxxxx}`.
 - Any space in the key word will be ignored.
-- If '{', '}', '\', '$' is in the key word, use "\{", "\}", "\\", "\$" instead.
-- Use not, or, and, () to show a pattern.
+- If `{`, `}`, `\`, `$` is in the key word, use `\{`, `\}`, `\`, `\$` instead.
+- Use `not`, `or`, `and`, `()` to show a pattern.
 
-​	**Example:** ***(\${Hello} or \${Hi}) and \${Jon} and not \${Harry}*** Only download posts with "Hello" or "Hi" in the description. "Jon" must inside either but "Harry" must not inside.
+​        **Example:** ***(\${Hello} or \${Hi}) and \${Jon} and not \${Harry}*** Only download posts with "Hello" or "Hi" in the description. "Jon" must inside either but "Harry" must not inside.
 
 ### Arguments
 

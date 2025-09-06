@@ -16,7 +16,7 @@ RUN mkdir -p logs
 RUN apt-get update && apt-get install -y cron && rm -rf /var/lib/apt/lists/*
 
 # Time set for cron
-ENV CRON_SCHEDULE="0 * * * *"
+ENV CRON_SCHEDULE="0 8,20 * * *"
 
 # Set Time zone
 ENV TZ=Asia/Shanghai
@@ -25,7 +25,7 @@ ENV TZ=Asia/Shanghai
 RUN chmod +x /app/start.sh
 
 # Holding storage
-VOLUME ["/app/logs"]
+VOLUME ["/app/data"]
 
 # Run ENTRY bash
 ENTRYPOINT ["/app/start.sh"]
