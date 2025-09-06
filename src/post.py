@@ -1,5 +1,7 @@
 import logging
 import asyncio
+import time
+import sys
 from API.crawlers.douyin.web.web_crawler import DouyinWebCrawler
 from dataclasses import dataclass, field
 
@@ -110,18 +112,25 @@ def get_posts(url: str, logger: logging.Logger) -> poster:
     while True:
         page += 1
         # Fetch data
-        try:
-            r = asyncio.run(API.fetch_user_post_videos(rtn.sec_user_id, cursor, 20))
-        except Exception as e:
-            logger.error(f"Get posts failed: {e}")
-            return False
-        else:
-            logger.debug(f"Current page is {page}; cursor is {cursor}.")
-        
-        # If empty 
-        if "aweme_list" not in r:
-            logger.error(f"Requests suceess but no data in return.")
-            return False
+        got = False
+        for i in range(6):
+            try:
+                r = asyncio.run(API.fetch_user_post_videos(rtn.sec_user_id, cursor, 20))
+            except Exception as e:
+                logger.error(f"Get posts failed (retry {i}): {e}")
+            else:
+                got = True
+                logger.debug(f"Current page is {page}; cursor is {cursor}.")
+            # If empty 
+            if "aweme_list" not in r:
+                logger.error(f"Requests suceess but no data in return. Retry {i}.")
+            if got:
+                break
+            else:
+                time.sleep(4*2**i)
+        if not got:
+            logger.error(f"Get posts failed: {rtn.sec_user_id}")
+            sys.exit(1)
         
         # Get urls
         for P in r["aweme_list"]:
