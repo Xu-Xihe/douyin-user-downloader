@@ -80,11 +80,19 @@ def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger) 
                     pg.new(2)
                     task = pg.execute(2).add_task(description=str(pathlib.Path(path).name), total=total)
                     pg.live().update(pg.get_group())
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-                    if pg.isatty():
-                        pg.execute(2).update(task, advance=len(chunk))
-                pg.stop(2)
+                try:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                        if pg.isatty():
+                            pg.execute(2).update(task, advance=len(chunk))
+                except Exception as e:
+                    f.close()
+                    pg.stop(2)
+                    if pathlib.Path(path).exists():
+                        pathlib.Path(path).unlink()
+                    return False
+                else:
+                    pg.stop(2)
         except IOError as e:
             logger.error(f"Single_downloader: Error writing to file {path}: {e}")
             return False

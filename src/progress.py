@@ -1,7 +1,12 @@
 from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn, DownloadColumn, SpinnerColumn, TimeElapsedColumn, TransferSpeedColumn
 from rich.console import Group
 from rich.live import Live
+from rich.console import Console
 import sys
+import atexit
+
+console = Console()
+atexit.register(console.show_cursor)
 
 _progress_list = [None, None, None]
 _live = None
