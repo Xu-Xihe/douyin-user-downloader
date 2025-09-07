@@ -71,6 +71,7 @@ def fetch_post_url(data: dict, logger: logging.Logger) -> post:
     return post(data["aweme_id"], s, share, data["create_time"], type, num)
 
 def fetch_user_profile(url: str, logger: logging.Logger) -> poster:
+    global last
     #Get sec_user_id
     try:
         sec_user_id = asyncio.run(API.get_sec_user_id(url))
@@ -109,6 +110,7 @@ def fetch_user_profile(url: str, logger: logging.Logger) -> poster:
         return rtn
 
 def get_posts(url: str, logger: logging.Logger) -> poster:
+    global last
     rtn = fetch_user_profile(url, logger)
 
     #Get posts
