@@ -69,6 +69,9 @@ def generate_readme(histroy: list, U: poster, nickname: str, remark: str, path_s
     path_avatar.mkdir(parents=True, exist_ok=True)
     num_cover = find_largest_file(path_cover,"cover")
     num_avatar = find_largest_file(path_avatar,"avatar")
+    if not histroy:
+        num_avatar = 0
+        num_cover = 0
     src.downloader.single_downloader(U.avatar,
                                      f"{str(path_avatar.resolve())}/avatar{num_avatar + 1}.jpeg",
                                      Cookie, logger)
@@ -86,8 +89,9 @@ def generate_readme(histroy: list, U: poster, nickname: str, remark: str, path_s
         try:
             with open (path_readme, "r", encoding="UTF-8") as f:
                 while True:
-                    if f.readline() == "## Update history\n":
-                        old = f.readlines()
+                    if f.readline() == "## Update history\n" or f.readline() == "":
+                        if histroy:
+                            old = f.readlines()
                         break
         except OSError as e:
             logger.error(f"Open readme.md failed: {e}")

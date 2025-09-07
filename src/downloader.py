@@ -89,10 +89,9 @@ def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger) 
             logger.error(f"Single_downloader: Error writing to file {path}: {e}")
             return False
         else:
+            r.close()
             logger.debug(f"Successfully! Downloaded {path} Link: {url}")
             return True
-    finally:
-        r.close()
     
 def V_downloader(path_str: str, V: post, Cookie: str, logger: logging.Logger, statistic: str = "", task = None) -> int:
     error = 0

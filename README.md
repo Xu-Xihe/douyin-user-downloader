@@ -60,9 +60,9 @@ docker run -d --name douyin-user-downloader -v /path/to/file/settings.json:/app/
 
 #### 1 Volums
 
-- **settings.json (Required):** `-v /home/path/setting_file.json:/app/settings.json`
-- **Download Folder (Required):** `-v /home/path/download:/container/path/download`
-- **Logs Folder (Optional):** `-v /home/path/log:/app/logs`
+- **settings.json (Required):** `-v /home/path/to/setting_file.json:/app/settings.json`
+- **Download Folder (Required):** `-v /home/path/to/download:/container/path/to/download`
+- **Logs Folder (Optional):** `-v /home/path/to/log:/app/data`
 
 > [!CAUTION]
 >
@@ -213,22 +213,6 @@ The program needs cookie to avoid api rick management. Please follow the step to
 ​        **Required:** ❌
 
 ​        **Description:** The length of description in the name of download files. If it is negative, all content after '#' will be abandoned.
-
-`"retry_times": 3`:
-
-​        **Value:** INT
-
-​        **Required:** ❌
-
-​        **Description:** Maximum times of retrying after download failed.
-
-`"retry_sec": 3`:
-
-​        **Value:** INT
-
-​        **Required:** ❌
-
-​        **Description:** Seconds between each retry. Exponential backoff.
 
 #### users
 
