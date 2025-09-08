@@ -2,28 +2,29 @@
 # Add model searching path
 import sys
 import pathlib
+import atexit
+from rich.console import Console
+
+# Add python search path
 BASE_PATH = pathlib.Path(__file__).resolve().parent
 sys.path.append(str(BASE_PATH / "API"))
+
+# Add cmd before exit & file lock
+if pathlib.Path(BASE_PATH / "data" / "run_lock.lock").exists():
+    print("Another program is running... Try again later!")
+    sys.exit(1)
+else:
+    pathlib.Path(BASE_PATH / "data" / "run_lock.lock").touch()
+atexit.register(pathlib.Path(BASE_PATH / "data" / "run_lock.lock").unlink)
+console = Console()
+atexit.register(console.show_cursor)
 
 # Fetch args
 import src.args
 args = src.args.setup_args()
 
-# Import tools
-import sqlite3
-import json5
-import yaml
-from pydantic import BaseModel
-from src.logger import setup_log
-from src.align_unicode import align_unicode
-from src.readme import generate_readme
-from src.progress import pg
-import src.downloader
-import src.filter
-import src.post
-import src.database
-
 # Settings class
+from pydantic import BaseModel
 class user(BaseModel):
     url: str
     nickname: str = ""
@@ -59,6 +60,7 @@ error_p = 0
 error_u = []
 
 # Import settings
+import json5
 with open(BASE_PATH / str("settings.json"), "r", encoding="utf-8") as f:
     settings = setting(**json5.load(f))
 
@@ -66,6 +68,7 @@ if not args.cookie:
     args.cookie = settings.cookie
 
 # Copy cookie to API config file
+import yaml
 API_config_file_path = BASE_PATH / "API" / "crawlers" / "douyin" / "web" / "config.yaml"
 if not API_config_file_path.exists():
     print("API config file does not exist.")
@@ -77,49 +80,39 @@ with open(API_config_file_path, "w", encoding="utf-8") as f:
     yaml.safe_dump(API_config_file, f, allow_unicode=True)
 
 # Setup logger
+from src.logger import setup_log
 main_log = setup_log(settings.stream_level, settings.file_level)
 
-# Connect database
-try:
-    dtbe = sqlite3.connect(str(BASE_PATH / "data/downloaded.db"))
-except sqlite3.OperationalError as e:
-        main_log.error(f"Connect to database failed: OperationalError {e}")
-        if settings.database:
-            sys.exit(1)
-except sqlite3.Error as e:
-        main_log.error(f"Connect to database failed: {e}")
-        if settings.database:
-            sys.exit(1)
-else:
-    cur = dtbe.cursor()
-    main_log.debug("Successfully connected to database.")
+# Setup database
+from src.database import database
+dtbe = database(settings.database, main_log)
 
 # If args, exit program
-if src.args.exe_args(args, cur, main_log):
-    cur.close()
-    if settings.database:
-        try:
-            dtbe.commit()
-        except sqlite3.OperationalError as e:
-            main_log.error(f"Commit to database failed: OperationalError {e}")
-        except sqlite3.Error as e:
-            main_log.error(f"Commit to database failed: {e}")
+if src.args.exe_args(args, main_log):
+    # Close database
     dtbe.close()
+    # exit program
     sys.exit(1)
+
+# Setup progress
+from src.progress import Progress
+pgs = Progress()
+Progress.new(0)
 
 if not settings.cookie:
     main_log.warning("Cookie required. Post may not download without it.")
 
-# Set up progress & live
-if pg.isatty():
-    pg.live().start()
-    pg.new(0)
+# Import tools
+from src.align_unicode import align_unicode
+from src.readme import generate_readme
+import src.downloader
+import src.filter
+import src.post
 
 for U in settings.users:
     # Add user_progress task
-    if pg.isatty():
-        task_user = pg.execute(0).add_task(description="", total=None)
-        pg.live().update(pg.get_group())
+    task_user = Progress.execute(0).add_task(description="", total=None)
+    Progress.update()
 
     # Get posts data
     user_pin += 1
@@ -141,16 +134,15 @@ for U in settings.users:
             path_str += '/' + P.nickname
 
     # Check in database
-    dt_user = src.database.find_user(P, U.nickname if U.nickname else P.nickname, cur, main_log)
+    dt_user = database.find_user(P, U.nickname if U.nickname else P.nickname)
 
     # Generate readme
     if U.readme and U.new_folder:
-        generate_readme(dt_user, P, U.nickname if U.nickname else P.nickname, U.remark, path_str, settings.cookie, cur, main_log)
+        generate_readme(dt_user, P, U.nickname if U.nickname else P.nickname, U.remark, path_str, settings.cookie, main_log)
     
     # Update user_progress task
-    if pg.isatty():
-        pg.new(1)
-        pg.execute(0).update(task_user, total=len(P.posts), description=f"{P.nickname}[bold orange] {user_pin}/{len(settings.users)}")
+    Progress.new(1)
+    Progress.execute(0).update(task_user, total=len(P.posts), description=f"{P.nickname}[bold orange] {user_pin}/{len(settings.users)}")
     
     # Post download      
     main_log.debug(f"User {P.nickname if U.nickname == "" else U.nickname} {P.sec_user_id} Save_path: {path_str} downloading... ")
@@ -158,24 +150,20 @@ for U in settings.users:
     for V in P.posts:
         # init
         num += 1
-        if pg.isatty():
-            post_task = pg.execute(1).add_task(description=V.desc[:10], status="[yellow]Checking...", total=None)
-            pg.live().update(pg.get_group())
+        post_task = Progress.execute(1).add_task(description=V.desc[:10], status="[yellow]Checking...", total=None)
+        Progress.update()
 
         # Database Check
         fit = src.filter.filter(V.desc, U.filter, main_log) and src.filter.time_limit(V.date, U.time_limit, main_log)
-        exist_V = src.database.find_V(P.user_id, V.aweme_id, fit, cur, main_log)
+        exist_V = database.find_V(P.user_id, V.aweme_id, fit)
 
         if (fit and exist_V == 1) or (fit and settings.retry_downloaded and exist_V == 2):
             # Make download dir
             mkdir = src.downloader.mkdir_download_path(V, path_str, U.separate_limit, settings.date_format, settings.desc_length, main_log)
             if mkdir:
                 # Download posts
-                if pg.isatty():
-                    pg.execute(1).update(post_task, status="[green]processing...", total=V.num)
-                    download_error = src.downloader.V_downloader(mkdir, V, settings.cookie, main_log, f"{num}/{len(P.posts)}", post_task)
-                else:
-                    download_error = src.downloader.V_downloader(mkdir, V, settings.cookie, main_log, f"{num}/{len(P.posts)}")
+                Progress.execute(1).update(post_task, status="[green]processing...", total=V.num)
+                download_error = src.downloader.V_downloader(mkdir, V, settings.cookie, main_log, post_task, f"{num}/{len(P.posts)}")
                 if download_error:
                     error_p += 1
                     error_f += download_error
@@ -183,40 +171,27 @@ for U in settings.users:
                         error_u.index(P.nickname)
                     except ValueError:
                         error_u.append(P.nickname)
-                    if pg.isatty():
-                        pg.execute(1).update(post_task, status="[bold red]Error")
+                    Progress.execute(1).update(post_task, status=f"[bold red]Error {download_error}", advance=download_error)
                 else:
-                    src.database.download_V(P.user_id, V.aweme_id, cur, main_log)
-                    if pg.isatty():
-                        pg.execute(1).update(post_task, status="[bold green]Done")
+                    database.download_V(P.user_id, V.aweme_id)
+                    Progress.execute(1).update(post_task, status="[bold green]Done")
                 download_p += 1
                 download_f += V.num
             else:
                 main_log.error(f"Make dir failed: {V.aweme_id} {V.desc[:6]}")
-                if pg.isatty():
-                    pg.execute(1).update(post_task, total=0, status="[bold red]Dir Error")
+                Progress.execute(1).update(post_task, total=0, status="[bold red]Dir Error")
                 continue
         else:
-            if pg.isatty():
-                pg.execute(1).update(post_task, status="[bold purple]Skip", total=0)
+            Progress.execute(1).update(post_task, status="[bold purple]Skip", total=V.num, advance=V.num)
             main_log.debug(f"Post {V.aweme_id} {align_unicode(V.desc[:8], 20, False)} skip download. {num}/{len(P.posts)}")
-        if pg.isatty():
-            pg.execute(0).update(task_user, advance=1)
+        Progress.execute(0).update(task_user, advance=1)
     main_log.info(f"User {align_unicode(U.nickname if U.nickname else P.nickname, 20, False)} {P.sec_user_id} is done!")
-    if settings.database:
-        try:
-            dtbe.commit()
-        except sqlite3.OperationalError as e:
-            main_log.error(f"Commit to database failed: OperationalError {e}")
-        except sqlite3.Error as e:
-            main_log.error(f"Commit to database failed: {e}")
 
-if pg.isatty():
-    pg.new(2)
-    pg.live().stop()
+# Close Progress
+Progress.new(2)
+pgs.stop()
 
 # Close database
-cur.close()
 dtbe.close()
 
 # Statistics

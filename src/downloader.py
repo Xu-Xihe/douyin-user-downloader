@@ -3,10 +3,9 @@ import logging
 import datetime
 import pathlib
 import sys
-import rich.progress as pgs
+from src.progress import Progress
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from src.progress import pg
 from src.post import post
 from src.align_unicode import align_unicode
 
@@ -34,8 +33,8 @@ def mkdir_download_path(post_info: post, path_str: str, separate_limit: int, dat
     try:
         path = pathlib.Path(path_str).expanduser()
         path.mkdir(parents = True, exist_ok= True)
-    except PermissionError as e:
-        logger.error(f"Make dir at path {path_str} failed! Permission deny.")
+    except Exception as e:
+        logger.error(f"Make dir at path {path_str} failed! {e}")
         return False
     else:
         return str(path / name)
@@ -76,23 +75,25 @@ def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger) 
         total = int(r.headers.get("Content-Length", 0))
         try:
             with open(path, "wb") as f:
-                if pg.isatty():
-                    pg.new(2)
-                    task = pg.execute(2).add_task(description=str(pathlib.Path(path).name), total=total)
-                    pg.live().update(pg.get_group())
+                Progress.new(2)
+                task = Progress.execute(2).add_task(description=str(pathlib.Path(path).name), total=total)
+                Progress.update()
                 try:
+                    saved = 0
                     for chunk in r.iter_content(chunk_size=8192):
+                        saved += 1
                         f.write(chunk)
-                        if pg.isatty():
-                            pg.execute(2).update(task, advance=len(chunk))
-                except Exception as e:
+                        Progress.execute(2).update(task, advance=len(chunk))
+                except BaseException as e:
                     f.close()
-                    pg.stop(2)
+                    r.close()
+                    Progress.execute(2).update(task, completed=saved * 8192)
                     if pathlib.Path(path).exists():
                         pathlib.Path(path).unlink()
-                    return False
-                else:
-                    pg.stop(2)
+                    if isinstance(e, Exception):
+                        return False
+                    else:
+                        sys.exit(1)
         except IOError as e:
             logger.error(f"Single_downloader: Error writing to file {path}: {e}")
             return False
@@ -101,7 +102,7 @@ def single_downloader(url: str, path: str, Cookie: str, logger: logging.Logger) 
             logger.debug(f"Successfully! Downloaded {path} Link: {url}")
             return True
     
-def V_downloader(path_str: str, V: post, Cookie: str, logger: logging.Logger, statistic: str = "", task = None) -> int:
+def V_downloader(path_str: str, V: post, Cookie: str, logger: logging.Logger, task, statistic: str = "") -> int:
     error = 0
     for x in range(1,V.num+1):
         if V.num >= 2:
@@ -114,8 +115,8 @@ def V_downloader(path_str: str, V: post, Cookie: str, logger: logging.Logger, st
             name += ".mp4"
         if not single_downloader(V.url[x], name, Cookie, logger):
             error += 1
-        elif pg.isatty() and task:
-            pg.execute(1).update(task, advance=1)
+        else:
+            Progress.execute(1).update(task, advance=1)
     
     # Result
     if error == 0:

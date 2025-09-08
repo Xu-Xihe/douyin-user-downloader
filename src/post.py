@@ -1,7 +1,6 @@
 import logging
 import asyncio
 import time
-import sys
 from API.crawlers.douyin.web.web_crawler import DouyinWebCrawler
 from dataclasses import dataclass, field
 
@@ -92,21 +91,25 @@ def fetch_user_profile(url: str, logger: logging.Logger) -> poster:
         return False
     else:
         data = r["user"]
-        rtn = poster(nickname       = data["nickname"],
-                     sec_user_id    = sec_user_id,
-                     user_id        = data["uid"],
-                     avatar         = data["avatar_300x300"]["url_list"][0],
-                     cover          = data["cover_url"][0]["url_list"][0],
-                     ip             = data["ip_location"] if "ip_location" in data else "",
-                     signature      = data["signature"],
-                     gender         = data["gender"],
-                     unique_id      = data["unique_id"],
-                     age            = data["user_age"],
-                     country        = data["country"],
-                     province       = data["province"],
-                     city           = data["city"],
-                     school         = data["school_name"])
-        logger.debug(f"Get user {rtn.user_id} nickname {rtn.nickname} success.")
+        try:
+            rtn = poster(nickname       = data["nickname"],
+                        sec_user_id    = sec_user_id,
+                        user_id        = data["uid"],
+                        avatar         = data["avatar_300x300"]["url_list"][0],
+                        cover          = data["cover_url"][0]["url_list"][0],
+                        ip             = data["ip_location"] if "ip_location" in data else "",
+                        signature      = data["signature"],
+                        gender         = data["gender"],
+                        unique_id      = data["unique_id"],
+                        age            = data["user_age"],
+                        country        = data["country"],
+                        province       = data["province"],
+                        city           = data["city"],
+                        school         = data["school_name"])
+        except Exception as e:
+            logger.error(f"Get user info error: {e}")
+        else:
+            logger.debug(f"Get user {rtn.user_id} nickname {rtn.nickname} success.")
         return rtn
 
 def get_posts(url: str, logger: logging.Logger) -> poster:
@@ -140,7 +143,7 @@ def get_posts(url: str, logger: logging.Logger) -> poster:
                 time.sleep(4*2**i)
         if not got:
             logger.error(f"Get posts failed: {rtn.sec_user_id}")
-            sys.exit(1)
+            return False
         
         # Get urls
         for P in r["aweme_list"]:

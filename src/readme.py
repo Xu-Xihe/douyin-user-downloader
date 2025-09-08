@@ -3,11 +3,10 @@ import pathlib
 import re
 import io
 import time
-import sqlite3
 import filecmp
 import src.downloader
 from src.post import poster
-from src.database import update_user
+from src.database import database
 from src.align_unicode import align_address
 
 def diff_img(org_img: str, upt_img: str) -> bool:
@@ -61,7 +60,7 @@ def add_history(title: str, new_value, old: list, f: io.TextIOWrapper, add: bool
                 f.write(f" {new_value}\n\n")
 
 
-def generate_readme(histroy: list, U: poster, nickname: str, remark: str, path_str:str, Cookie: str, cur:sqlite3.Cursor, logger: logging.Logger):
+def generate_readme(histroy: list, U: poster, nickname: str, remark: str, path_str:str, Cookie: str, logger: logging.Logger):
     path_readme = pathlib.Path(path_str).expanduser() / "readme.md"
     path_cover = pathlib.Path(path_str).expanduser() / ".cover"
     path_avatar = pathlib.Path(path_str).expanduser() / ".avatar"
@@ -127,42 +126,42 @@ def generate_readme(histroy: list, U: poster, nickname: str, remark: str, path_s
             if histroy:
                 if not U.nickname == histroy[2]:
                     add_history("Nickname", U.nickname, old, f)
-                    update_user(U.user_id, "nickname", U.nickname, cur, logger)
+                    database.update_user(U.user_id, "nickname", U.nickname)
                 else:
                     add_history("Nickname", "", old, f, False)
                 if not U.unique_id == histroy[3]:
                     add_history("Douyin ID", U.unique_id, old, f)
-                    update_user(U.user_id, "unique_id", U.unique_id, cur, logger)
+                    database.update_user(U.user_id, "unique_id", U.unique_id)
                 else:
                     add_history("Douyin ID", "", old, f, False)
                 if not U.gender == histroy[4]:
                     add_history("Gender", "Male" if U.gender == 1 else "Female" if U.gender == 2 else "Unknown", old, f)
-                    update_user(U.user_id, "gender", U.gender, cur, logger)
+                    database.update_user(U.user_id, "gender", U.gender)
                 else:
                     add_history("Gender", "", old, f, False)
                 if not U.age == histroy[5]:
                     add_history("Age", {str(U.age) if not U.age == -1 else "Unknown"}, old, f)
-                    update_user(U.user_id, "age", U.age, cur, logger)
+                    database.update_user(U.user_id, "age", U.age)
                 else:
                     add_history("Age", "", old, f, False)
                 if not align_address(U.country, U.province, U.city) == histroy[6]:
                     add_history("Address", align_address(U.country, U.province, U.city), old, f)
-                    update_user(U.user_id, "address", align_address(U.country, U.province, U.city), cur, logger)
+                    database.update_user(U.user_id, "address", align_address(U.country, U.province, U.city))
                 else:
                     add_history("Address", "", old, f, False)
                 if not U.school == histroy[7]:
                     add_history("School", U.school if U.school else "Unknown", old, f)
-                    update_user(U.user_id, "school", U.school, cur, logger)
+                    database.update_user(U.user_id, "school", U.school)
                 else:
                     add_history("School", "", old, f, False)
                 if not U.ip == histroy[8]:
                     add_history("IP", U.ip[5:], old, f)
-                    update_user(U.user_id, "ip", U.ip, cur, logger)
+                    database.update_user(U.user_id, "ip", U.ip)
                 else:
                     add_history("IP", "", old, f, False)
                 if not U.signature == histroy[9]:
                     add_history("Signature", U.signature, old, f)
-                    update_user(U.user_id, "signature", U.signature, cur, logger)
+                    database.update_user(U.user_id, "signature", U.signature)
                 else:
                     add_history("Signature", "", old, f, False)
                 if num_avatar < 0:

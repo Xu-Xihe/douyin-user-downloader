@@ -2,7 +2,7 @@ import argparse
 import os
 import logging
 import sqlite3
-from src.progress import pg
+from src.progress import Progress
 
 def setup_args() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Download posts and users from Douyin.com Caution: When any is chosen, program won't download users in the settings.json.")
@@ -41,7 +41,7 @@ def setup_args() -> argparse.ArgumentParser:
 
     # Version
     version = parser.add_argument_group("Version")
-    version.add_argument("-v", "--version", action='version', version='V1.3.8', help="Show program's version")
+    version.add_argument("-v", "--version", action='version', version='V1.4.0', help="Show program's version")
 
     # Get args && Args in file
     args = parser.parse_args()
@@ -64,18 +64,17 @@ def setup_args() -> argparse.ArgumentParser:
     
     return args
 
-def exe_args(args: argparse.Namespace, cur: sqlite3.Cursor, logger: logging.Logger) -> bool:
+def exe_args(args: argparse.Namespace, logger: logging.Logger) -> bool:
     # Import
-    import src.database
+    from src.database import database
     if args.user or args.post:
         import src.post
         import src.downloader
         import src.filter
         from src.readme import generate_readme
         from src.align_unicode import align_unicode
-        if pg.isatty():
-            pg.live().start()
-            pg.new(0)
+        pgs = Progress()
+        Progress.new(0)
 
     # Cookie
     if not args.cookie:
@@ -92,9 +91,8 @@ def exe_args(args: argparse.Namespace, cur: sqlite3.Cursor, logger: logging.Logg
                 continue
             
             # Add user_progress task
-            if pg.isatty():
-                task_user = pg.execute(0).add_task(description="", total=None)
-                pg.live().update(pg.get_group())
+            task_user = Progress.execute(0).add_task(description="", total=None)
+            Progress.update()
             
             # Statistics
             user_pin += 1
@@ -107,50 +105,43 @@ def exe_args(args: argparse.Namespace, cur: sqlite3.Cursor, logger: logging.Logg
                 continue
             logger.info(f"User {U.nickname} {U.sec_user_id} downloading... {user_pin}/{len(args.user)} Save_path: {args.path} ")
 
+            # Check in database
+            dt_user = database.find_user(U, U.nickname)
+
             # Readme
             if args.readme:
-                generate_readme([], U, U.nickname, "", args.path + '/' + U.nickname, args.cookie, cur, logger)
+                generate_readme(dt_user, U, U.nickname, "", args.path + '/' + U.nickname, args.cookie, logger)
             
             # Update user_progress task
-            if pg.isatty():
-                pg.new(1)
-                pg.execute(0).update(task_user, total=len(U.posts), description=f"{U.nickname}[bold orange] {user_pin}/{len(args.user)}")
+            Progress.new(1)
+            Progress.execute(0).update(task_user, total=len(U.posts), description=f"{U.nickname}[bold orange] {user_pin}/{len(args.user)}")
             
             # Download posts
             for P in U.posts:
                 # init
                 post_pin += 1
-                if pg.isatty():
-                    post_task = pg.execute(1).add_task(description=P.desc[:10], status="[yellow]Checking...", total=None)
-                    pg.live().update(pg.get_group())
+                post_task = Progress.execute(1).add_task(description=P.desc[:10], status="[yellow]Checking...", total=None)
+                Progress.update()
                 
                 # filter check
                 if src.filter.filter(P.desc, args.filter, logger) and src.filter.time_limit(P.date, args.time, logger):
                     down = src.downloader.mkdir_download_path(P, args.path + '/' + U.nickname, args.separate_limit, r"%Y-%m-%d", args.desc_length, logger)
                     if down:
                         # Download posts
-                        if pg.isatty():
-                            pg.execute(1).update(post_task, status="[green]processing...", total=P.num)
-                            download_error = src.downloader.V_downloader(down, P, args.cookie, logger, f"{post_pin}/{len(U.posts)}", post_task)
-                        else:
-                            download_error = src.downloader.V_downloader(down, P, args.cookie, logger, f"{post_pin}/{len(U.posts)}")
+                        Progress.execute(1).update(post_task, status="[green]processing...", total=P.num)
+                        download_error = src.downloader.V_downloader(down, P, args.cookie, logger, post_task, f"{post_pin}/{len(U.posts)}")
                         if download_error:
                             error += download_error
-                            if pg.isatty():
-                                pg.execute(1).update(post_task, status="[bold red]Error")
+                            Progress.execute(1).update(post_task, status="[bold red]Error")
                         else:
-                            if pg.isatty():
-                                pg.execute(1).update(post_task, status="[bold green]Done")
+                            Progress.execute(1).update(post_task, status="[bold green]Done")
                     else:
-                        if pg.isatty():
-                            pg.execute(1).update(post_task, total=0, status="[bold red]Dir Error")
+                        Progress.execute(1).update(post_task, total=0, status="[bold red]Dir Error")
                         continue
                 else:
-                    if pg.isatty():
-                        pg.execute(1).update(post_task, status="[bold purple]Skip", total=0)
+                    Progress.execute(1).update(post_task, status="[bold purple]Skip", total=0)
                     logger.info(f"Post {P.aweme_id} {align_unicode(P.desc[:8], 20, False)} skip download. {post_pin}/{len(U.posts)}")
-                if pg.isatty():
-                    pg.execute(0).update(task_user, advance=1)
+                Progress.execute(0).update(task_user, advance=1)
         if error:
             logger.error(f"Download users finished. Error: {error}")
         else:
@@ -161,8 +152,7 @@ def exe_args(args: argparse.Namespace, cur: sqlite3.Cursor, logger: logging.Logg
         # init
         error = 0
         post_pin = 0
-        if pg.isatty():
-                pg.new(1)
+        Progress.new(1)
 
         for url in args.post:
             if "http" not in url:
@@ -170,62 +160,48 @@ def exe_args(args: argparse.Namespace, cur: sqlite3.Cursor, logger: logging.Logg
 
             # init
             post_pin += 1
-            if pg.isatty():
-                post_task = pg.execute(1).add_task(description="", status="[yellow]Checking...", total=None)
-                pg.live().update(pg.get_group())
+            post_task = Progress.execute(1).add_task(description="", status="[yellow]Checking...", total=None)
+            Progress.update()
             
             P = src.post.get_single_post(url, logger)
             if P:
                 down = src.downloader.mkdir_download_path(P, args.path, args.separate_limit, r"%Y-%m-%d", args.desc_length, logger)
                 if down:
-                    if pg.isatty():
-                        pg.execute(1).update(post_task, status="[green]processing...", total=P.num, description=P.desc[:10])
-                        download_error = src.downloader.V_downloader(down, P, args.cookie, logger, f"{post_pin}/{len(args.post)}", post_task)
-                    else:
-                        download_error = src.downloader.V_downloader(down, P, args.cookie, logger, f"{post_pin}/{len(args.post)}")
+                    Progress.execute(1).update(post_task, status="[green]processing...", total=P.num, description=P.desc[:10])
+                    download_error = src.downloader.V_downloader(down, P, args.cookie, logger, post_task, f"{post_pin}/{len(args.post)}")
                     if download_error:
                         error += download_error
-                        if pg.isatty():
-                                pg.execute(1).update(post_task, status="[bold red]Error")
+                        Progress.execute(1).update(post_task, status="[bold red]Error")
                     else:
-                        if pg.isatty():
-                            pg.execute(1).update(post_task, status="[bold green]Done")
+                        Progress.execute(1).update(post_task, status="[bold green]Done")
                 else:
                     logger.error(f"Make dir failed: {P.aweme_id} {P.desc[:6]}")
-                    if pg.isatty():
-                        pg.execute(1).update(post_task, total=0, status="[bold red]Dir Error", description=P.desc[:10])
+                    Progress.execute(1).update(post_task, total=0, status="[bold red]Dir Error", description=P.desc[:10])
                     continue
             else:
                 logger.error("Get post error!")
-                if pg.isatty():
-                    pg.execute(1).update(post_task, status="[bold red]Get Post Error", total=0)
+                Progress.execute(1).update(post_task, status="[bold red]Get Post Error", total=0)
         if error:
             logger.error(f"Download posts finished. Error: {error}")
         else:
             logger.info(f"Download posts finished. All success! Total: {post_pin}")
 
     # Stop live
-    if (args.user or args.post) and pg.isatty():
-        pg.new(2)
-        pg.live().stop()
+    if args.user or args.post:
+        Progress.new(2)
+        pgs.stop()
 
     # Database
     if args.list:
-        print(src.database.execute(f"SELECT * FROM \"{args.list}\";", cur, logger))
+        print(database.execute(f"SELECT * FROM \"{args.list}\";"))
     
     if args.delete:
-        try:
-            src.database.erase_user(args.delete, cur, logger)
-            cur.execute("DELETE FROM \"All_Users\" WHERE user_id = ?", (args.delete,))
-        except sqlite3.InterfaceError as e:
-            logger.error(f"Database error (args_delete): InterfaceError {e}")
-        except sqlite3.DatabaseError as e:
-            logger.error(f"Database error (args_delete): DatabaseError {e}")
-        else:
-            logger.info(f"Delete {args.delete}.")
+        database.erase_user(args.delete)
     
     if args.execute:
-        logger.info(f"Database response: {src.database.execute(args.execute, cur, logger)}")
+        rp = database.execute(args.execute)
+        print(f"Database response: {rp}")
+        logger.info(f"Database response: {rp}")
 
     # Args use?
     if any([args.user, args.post, args.list, args.delete, args.execute]):
