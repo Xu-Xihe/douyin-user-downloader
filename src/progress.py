@@ -48,6 +48,7 @@ class Progress:
                 pg.BarColumn(),
                 "[bold green]{task.completed}/{task.total}",
                 pg.TimeElapsedColumn(),
+                "{task.fields[status]}",
                 transient=False
             )
             cls._progress_list[0] = progress

@@ -149,7 +149,7 @@ class database:
             cls.lg_error(f"Database error: {e}")
         else:
             rt=cls.cursor.fetchall()
-            if len(rt) == 0:
+            if len(rt) == 0: # Video not in database
                 try:
                     cls.cursor.execute(f"INSERT INTO \"{user_id}\" VALUES (?, ?, ?);", (aweme_id, fit, False))
                 except Exception as e:
@@ -157,12 +157,15 @@ class database:
                 else:
                     cls.lg_debug(f"Post {aweme_id} is not in the database.")
                     ans = int(fit)
-            elif len(rt) == 1:
-                if rt[0][2]:
-                    cls.lg_debug(f"Post {aweme_id} is already exist, skip the download.")
+            elif len(rt) == 1: # Video find in database
+                if rt[0][2]: # exist = True
+                    if not fit:
+                        cls.lg_info(f"Post {aweme_id} is downloaded but filtered out.")
+                    else:
+                        cls.lg_debug(f"Post {aweme_id} is already exist, skip the download.")
                     ans = 0
-                elif fit:
-                    if rt[0][1] == fit:
+                elif fit: # exist = False but filter = True
+                    if rt[0][1] == fit: # filter = need_download = True
                         cls.lg_info(f"Post {aweme_id} has been downloaded but failed. Retrying...")
                         ans = 2
                     else:
@@ -174,7 +177,7 @@ class database:
                             cls.lg_debug(f"Post {aweme_id} is in the database but not downloaded.(May because last download failed or the change of the filter) Video is now downloading...")
                             ans = 1
                 else:
-                    cls.lg_info(f"Post {aweme_id} is downloaded but filtered out.")
+                    cls.lg_debug(f"Post {aweme_id} is filtered out. Skip download.")
                     ans = 0
             else:
                 cls.lg_error(f"Post {aweme_id} has been found more than once in the database.")

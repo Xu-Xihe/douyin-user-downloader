@@ -111,7 +111,7 @@ import src.post
 
 for U in settings.users:
     # Add user_progress task
-    task_user = Progress.execute(0).add_task(description="", total=None)
+    task_user = Progress.execute(0).add_task(description="", total=None, status="[yellow]Fetching...")
     Progress.update()
 
     # Get posts data
@@ -142,11 +142,12 @@ for U in settings.users:
     
     # Update user_progress task
     Progress.new(1)
-    Progress.execute(0).update(task_user, total=len(P.posts), description=f"{P.nickname}[bold orange] {user_pin}/{len(settings.users)}")
+    Progress.execute(0).update(task_user, total=len(P.posts), description=f"{P.nickname}[bold orange] {user_pin}/{len(settings.users)}", status="[green]Downloading...")
     
     # Post download      
     main_log.debug(f"User {P.nickname if U.nickname == "" else U.nickname} {P.sec_user_id} Save_path: {path_str} downloading... ")
     num = 0
+    error_p_s = 0
     for V in P.posts:
         # init
         num += 1
@@ -167,14 +168,16 @@ for U in settings.users:
                 if download_error:
                     error_p += 1
                     error_f += download_error
+                    error_p_s += 1
                     try:
                         error_u.index(P.nickname)
                     except ValueError:
                         error_u.append(P.nickname)
-                    Progress.execute(1).update(post_task, status=f"[bold red]Error {download_error}", advance=download_error)
+                    Progress.execute(1).update(post_task, status=f"[bold red]Error {download_error}", completed=V.num)
                 else:
                     database.download_V(P.user_id, V.aweme_id)
                     Progress.execute(1).update(post_task, status="[bold green]Done")
+                    Progress.execute(0).update(task_user, advance=1)
                 download_p += 1
                 download_f += V.num
             else:
@@ -182,9 +185,12 @@ for U in settings.users:
                 Progress.execute(1).update(post_task, total=0, status="[bold red]Dir Error")
                 continue
         else:
-            Progress.execute(1).update(post_task, status="[bold purple]Skip", total=V.num, advance=V.num)
+            Progress.execute(1).update(post_task, status="[bold purple]Skip", total=V.num, completed=V.num)
             main_log.debug(f"Post {V.aweme_id} {align_unicode(V.desc[:8], 20, False)} skip download. {num}/{len(P.posts)}")
-        Progress.execute(0).update(task_user, advance=1)
+    if error_p_s:
+        Progress.execute(0).update(task_user, completed=len(P.posts), status=f"[bold red]Error {error_p_s}")
+    else:
+        Progress.execute(0).update(task_user, status="[bold green]Done")
     main_log.info(f"User {align_unicode(U.nickname if U.nickname else P.nickname, 20, False)} {P.sec_user_id} is done!")
 
 # Close Progress
