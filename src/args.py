@@ -41,7 +41,7 @@ def setup_args() -> argparse.ArgumentParser:
 
     # Version
     version = parser.add_argument_group("Version")
-    version.add_argument("-v", "--version", action='version', version='V1.4.1', help="Show program's version")
+    version.add_argument("-v", "--version", action='version', version='V1.4.2', help="Show program's version")
 
     # Get args && Args in file
     args = parser.parse_args()
@@ -91,7 +91,7 @@ def exe_args(args: argparse.Namespace, logger: logging.Logger) -> bool:
                 continue
             
             # Add user_progress task
-            task_user = Progress.execute(0).add_task(description="", total=None)
+            task_user = Progress.execute(0).add_task(description="", total=None, status="[yellow]Fetching...")
             Progress.update()
             
             # Statistics
@@ -114,7 +114,7 @@ def exe_args(args: argparse.Namespace, logger: logging.Logger) -> bool:
             
             # Update user_progress task
             Progress.new(1)
-            Progress.execute(0).update(task_user, total=len(U.posts), description=f"{U.nickname}[bold orange] {user_pin}/{len(args.user)}")
+            Progress.execute(0).update(task_user, total=len(U.posts), description=f"{U.nickname}[bold orange] {user_pin}/{len(args.user)}", status="[green]Downloading...")
             
             # Download posts
             for P in U.posts:
@@ -143,8 +143,10 @@ def exe_args(args: argparse.Namespace, logger: logging.Logger) -> bool:
                     logger.info(f"Post {P.aweme_id} {align_unicode(P.desc[:8], 20, False)} skip download. {post_pin}/{len(U.posts)}")
                 Progress.execute(0).update(task_user, advance=1)
         if error:
+            Progress.execute(0).update(task_user, completed=len(P.posts), status=f"[bold red]Error")
             logger.error(f"Download users finished. Error: {error}")
         else:
+            Progress.execute(0).update(task_user, status="[bold green]Done")
             logger.info(f"Download users finished. All success! Total: {user_pin}")
 
     # Post

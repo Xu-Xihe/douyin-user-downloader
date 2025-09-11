@@ -177,7 +177,7 @@ for U in settings.users:
                 else:
                     database.download_V(P.user_id, V.aweme_id)
                     Progress.execute(1).update(post_task, status="[bold green]Done")
-                    Progress.execute(0).update(task_user, advance=1)
+                    
                 download_p += 1
                 download_f += V.num
             else:
@@ -187,6 +187,7 @@ for U in settings.users:
         else:
             Progress.execute(1).update(post_task, status="[bold purple]Skip", total=V.num, completed=V.num)
             main_log.debug(f"Post {V.aweme_id} {align_unicode(V.desc[:8], 20, False)} skip download. {num}/{len(P.posts)}")
+        Progress.execute(0).update(task_user, advance=1)
     if error_p_s:
         Progress.execute(0).update(task_user, completed=len(P.posts), status=f"[bold red]Error {error_p_s}")
     else:
