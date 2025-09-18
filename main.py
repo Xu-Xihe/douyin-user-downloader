@@ -111,7 +111,7 @@ import src.post
 
 for U in settings.users:
     # Add user_progress task
-    task_user = Progress.execute(0).add_task(description="", total=None, status="[yellow]Fetching...")
+    task_user = Progress.execute(0).add_task(description=f"{user_pin}/{len(settings.users)}", total=None, status="[yellow]Fetching...")
     Progress.update()
 
     # Get posts data
@@ -189,7 +189,7 @@ for U in settings.users:
             main_log.debug(f"Post {V.aweme_id} {align_unicode(V.desc[:8], 20, False)} skip download. {num}/{len(P.posts)}")
         Progress.execute(0).update(task_user, advance=1)
     if error_p_s:
-        Progress.execute(0).update(task_user, completed=len(P.posts), status=f"[bold red]Error {error_p_s}")
+        Progress.execute(0).update(task_user, status=f"[bold red]Error {error_p_s}")
     else:
         Progress.execute(0).update(task_user, status="[bold green]Done")
     main_log.info(f"User {align_unicode(U.nickname if U.nickname else P.nickname, 20, False)} {P.sec_user_id} is done!")

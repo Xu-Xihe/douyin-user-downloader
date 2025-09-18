@@ -133,10 +133,10 @@ def get_posts(url: str, logger: logging.Logger) -> poster:
             else:
                 logger.debug(f"Current page is {page}; cursor is {cursor}.")
             # If empty 
-            if "aweme_list" not in r:
-                logger.error(f"Requests suceess but no data in return. Retry {i}.")
-            else:
+            if r and "aweme_list" in r and r["aweme_list"]:
                 got = True
+            else:
+                logger.error(f"Requests suceess but no data in return. Retry {i}.")
             if got:
                 break
             else:

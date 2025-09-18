@@ -41,7 +41,7 @@ def setup_args() -> argparse.ArgumentParser:
 
     # Version
     version = parser.add_argument_group("Version")
-    version.add_argument("-v", "--version", action='version', version='V1.4.2', help="Show program's version")
+    version.add_argument("-v", "--version", action='version', version='V1.4.3', help="Show program's version")
 
     # Get args && Args in file
     args = parser.parse_args()
