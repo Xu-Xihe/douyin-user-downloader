@@ -82,8 +82,8 @@ def fetch_user_profile(url: str, logger: logging.Logger) -> poster:
 
     #Get details
     try:
-        if not time.time() - last > 1:
-            time.sleep(1)
+        if not time.time() - last > 3:
+            time.sleep(3)
         last = time.time()
         r = asyncio.run(API.handler_user_profile(sec_user_id))
     except Exception as e:
@@ -115,6 +115,8 @@ def fetch_user_profile(url: str, logger: logging.Logger) -> poster:
 def get_posts(url: str, logger: logging.Logger) -> poster:
     global last
     rtn = fetch_user_profile(url, logger)
+    if not rtn:
+        return False
 
     #Get posts
     cursor, page = 0, 0
@@ -130,6 +132,7 @@ def get_posts(url: str, logger: logging.Logger) -> poster:
                 r = asyncio.run(API.fetch_user_post_videos(rtn.sec_user_id, cursor, 20))
             except Exception as e:
                 logger.error(f"Get posts failed (retry {i}): {e}")
+                r = None
             else:
                 logger.debug(f"Current page is {page}; cursor is {cursor}.")
             # If empty 
