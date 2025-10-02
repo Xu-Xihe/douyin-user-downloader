@@ -110,6 +110,10 @@ import src.filter
 import src.post
 
 for U in settings.users:
+    # Empty jump
+    if not U.url:
+        continue
+
     # Add user_progress task
     task_user = Progress.execute(0).add_task(description=f"{user_pin}/{len(settings.users)}", total=None, status="[yellow]Fetching...")
     Progress.update()
@@ -119,6 +123,7 @@ for U in settings.users:
     P = src.post.get_posts(U.url, main_log)
     if not P:
         main_log.error(f"Get posts from {U.nickname} {U.url} failed!")
+        error_u.append(f"{U.nickname if U.nickname else "Unknown"}")
         continue
     main_log.debug(f"Posts info of user {U.nickname if U.nickname else P.nickname} get. {P} {user_pin}/{len(settings.users)}")
     
@@ -204,7 +209,7 @@ dtbe.close()
 # Statistics
 if error_u:
     main_log.error(f"""Download completed! Total download:
-    Users: {len(settings.users)-len(error_u)}/{len(settings.users)}
+    Users: {user_pin-len(error_u)}/{user_pin}
     Post:  {download_p - error_p}/{download_p}
     Files: {download_f - error_f}/{download_f}
 Errors:
@@ -212,7 +217,7 @@ Errors:
 """)
 else:
     main_log.info(f"""Download completed! Total download:
-    Users: {len(settings.users)}
+    Users: {user_pin}
     Post:  {download_p}
     Files: {download_f}
 """)
