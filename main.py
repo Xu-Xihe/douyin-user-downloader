@@ -55,6 +55,7 @@ class setting(BaseModel):
 download_f = 0
 download_p = 0
 user_pin = 0
+user_total = 0
 error_f = 0
 error_p = 0
 error_u = []
@@ -109,13 +110,15 @@ import src.downloader
 import src.filter
 import src.post
 
+user_total = len(settings.users)
 for U in settings.users:
     # Empty jump
     if not U.url:
+        user_total -= 1
         continue
 
     # Add user_progress task
-    task_user = Progress.execute(0).add_task(description=f"{user_pin}/{len(settings.users)}", total=None, status="[yellow]Fetching...")
+    task_user = Progress.execute(0).add_task(description=f"{user_pin}/{user_total}", total=None, status="[yellow]Fetching...")
     Progress.update()
 
     # Get posts data
@@ -125,7 +128,7 @@ for U in settings.users:
         main_log.error(f"Get posts from {U.nickname} {U.url} failed!")
         error_u.append(f"{U.nickname if U.nickname else "Unknown"}")
         continue
-    main_log.debug(f"Posts info of user {U.nickname if U.nickname else P.nickname} get. {P} {user_pin}/{len(settings.users)}")
+    main_log.debug(f"Posts info of user {U.nickname if U.nickname else P.nickname} get. {P} {user_pin}/{user_total}")
     
     # Generate save path
     if U.path:
@@ -147,7 +150,7 @@ for U in settings.users:
     
     # Update user_progress task
     Progress.new(1)
-    Progress.execute(0).update(task_user, total=len(P.posts), description=f"{P.nickname}[bold orange] {user_pin}/{len(settings.users)}", status="[green]Downloading...")
+    Progress.execute(0).update(task_user, total=len(P.posts), description=f"{P.nickname}[bold orange] {user_pin}/{user_total}", status="[green]Downloading...")
     
     # Post download      
     main_log.debug(f"User {P.nickname if U.nickname == "" else U.nickname} {P.sec_user_id} Save_path: {path_str} downloading... ")
@@ -209,7 +212,7 @@ dtbe.close()
 # Statistics
 if error_u:
     main_log.error(f"""Download completed! Total download:
-    Users: {user_pin-len(error_u)}/{user_pin}
+    Users: {user_total-len(error_u)}/{user_total}
     Post:  {download_p - error_p}/{download_p}
     Files: {download_f - error_f}/{download_f}
 Errors:
