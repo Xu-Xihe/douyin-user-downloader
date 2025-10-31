@@ -1,6 +1,9 @@
 {
     // Enable the database for increasing update
     "database": true,
+    // Enable the download file check
+    // Caution: make sure the file name format be the same
+    "file_check": false,
     // Default download path
     "default_path": "Downloads/",
     // The download results are restored. Program can retry the failed ones.

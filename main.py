@@ -38,6 +38,7 @@ class user(BaseModel):
 
 class setting(BaseModel):
     database: bool = True
+    file_check: bool = False
     default_path:str = "~/Downloads"
     date_format:str = r"%Y-%m-%d"
     desc_length: int = -15
@@ -165,6 +166,15 @@ for U in settings.users:
         # Database Check
         fit = src.filter.filter(V.desc, U.filter, main_log) and src.filter.time_limit(V.date, U.time_limit, main_log)
         exist_V = database.find_V(P.user_id, V.aweme_id, fit)
+
+        # File Check (Function added)
+        if fit and settings.file_check:
+            d_path = src.downloader.mkdir_download_path(V, path_str, U.separate_limit, settings.date_format, settings.desc_length, main_log)
+            if d_path:
+                D_path = pathlib.Path(d_path)
+                f_count = sum(1 for f in D_path.parent.glob(f"{D_path.name}*") if f.is_file())
+                if not f_count == V.num:
+                    exist_V = 1  
 
         if (fit and exist_V == 1) or (fit and settings.retry_downloaded and exist_V == 2):
             # Make download dir
