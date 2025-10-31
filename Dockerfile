@@ -1,5 +1,5 @@
 # Select basic image
-FROM python:slim-bookworm
+FROM python:3.13-slim-bookworm
 
 # Set workdir
 WORKDIR /app
