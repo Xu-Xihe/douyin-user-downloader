@@ -164,6 +164,22 @@ The program needs cookie to avoid api rick management. Please follow the step to
 
 ​        **Description:** Enable the database-relatied functions. If false, the operation will still be excused but the changes will not be committed.
 
+`"file_check: false"`:
+
+​	**Value:** BOOL
+
+​        **Required:** ❌
+
+​	**Description:** Enable the file check for the downloaded posts.
+
+> [!CAUTION]
+>
+> This relay on the path & the prefix of the file.
+>
+> Make sure the file name continues to be the same.
+>
+> Or it may cause muliple re-download.
+
 `"default_path": "Downloads/"`:
 
 ​        **Value:** Path_Str
